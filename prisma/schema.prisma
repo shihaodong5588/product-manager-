@@ -1,0 +1,255 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum RequirementStatus {
+  SUBMITTED
+  APPROVED
+  IN_DEVELOPMENT
+  IN_TESTING
+  COMPLETED
+  REJECTED
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum MilestoneStatus {
+  UPCOMING
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  avatar    String?
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedTasks    Task[]
+  comments         Comment[]
+  activities       Activity[]
+  projectMemberships ProjectMember[]
+}
+
+model Requirement {
+  id          String            @id @default(cuid())
+  title       String
+  description String?
+  priority    Priority          @default(MEDIUM)
+  status      RequirementStatus @default(SUBMITTED)
+  tags        String?
+  estimatedHours Int?
+  actualHours    Int?
+  projectId   String?
+  createdById String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  project     Project?  @relation(fields: [projectId], references: [id])
+  tasks       Task[]
+  comments    Comment[]
+  attachments Attachment[]
+}
+
+model Task {
+  id            String     @id @default(cuid())
+  title         String
+  description   String?
+  status        TaskStatus @default(TODO)
+  priority      Priority   @default(MEDIUM)
+  assigneeId    String?
+  dueDate       DateTime?
+  estimatedHours Int?
+  actualHours    Int?
+  order         Int        @default(0)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  requirementId String?
+  projectId     String?
+
+  requirement   Requirement? @relation(fields: [requirementId], references: [id])
+  project       Project?     @relation(fields: [projectId], references: [id])
+  assignee      User?        @relation(fields: [assigneeId], references: [id])
+  comments      Comment[]
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  startDate   DateTime?
+  endDate     DateTime?
+  budget      Float?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  requirements Requirement[]
+  tasks        Task[]
+  milestones   Milestone[]
+  risks        Risk[]
+  members      ProjectMember[]
+}
+
+model Milestone {
+  id          String          @id @default(cuid())
+  title       String
+  description String?
+  status      MilestoneStatus @default(UPCOMING)
+  dueDate     DateTime
+  completedAt DateTime?
+  projectId   String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Risk {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  level       RiskLevel @default(MEDIUM)
+  impact      String?
+  mitigation  String?
+  owner       String?
+  status      String    @default("open")
+  projectId   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id            String   @id @default(cuid())
+  content       String
+  authorId      String
+  requirementId String?
+  taskId        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  author      User         @relation(fields: [authorId], references: [id])
+  requirement Requirement? @relation(fields: [requirementId], references: [id])
+  task        Task?        @relation(fields: [taskId], references: [id])
+}
+
+model Attachment {
+  id            String   @id @default(cuid())
+  filename      String
+  url           String
+  size          Int
+  requirementId String
+  createdAt     DateTime @default(now())
+
+  requirement Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  type        String
+  description String
+  userId      String
+  entityType  String?
+  entityId    String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+// ============ AI 智能助手相关表 ============
+
+model AIAnalysis {
+  id              String   @id @default(cuid())
+  analysisType    String   // 'requirement_analysis', 'risk_assessment', 'technical_feasibility'
+  sourceType      String   // 'requirement', 'task', 'project', 'risk'
+  sourceId        String   // 关联的源 ID
+  inputContent    String   // 从数据库读取的内容
+  userPrompt      String?  // 用户输入的额外提示词
+  analysisResult  String   // AI 分析结果（Markdown 格式）
+  structuredData  String?  // JSON 格式的结构化数据（可选）
+  modelUsed       String   @default("gemini-1.5-flash")
+  tokensUsed      Int?
+  processingTime  Int?     // 处理时长（毫秒）
+  rating          Int?     // 用户评分 1-5
+  feedback        String?  // 用户反馈
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // 注意：这些关系不使用外键约束，因为 sourceId 可能指向不同的表
+  // 通过 sourceType 字段来确定实际关联的表
+
+  @@index([sourceType, sourceId])
+  @@index([analysisType])
+  @@index([createdAt])
+}
+
+model AIPromptTemplate {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  analysisType    String
+  promptTemplate  String
+  defaultParams   String?  // JSON 格式
+  isSystem        Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([analysisType])
+}
