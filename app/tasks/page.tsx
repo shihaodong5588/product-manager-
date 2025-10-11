@@ -400,7 +400,7 @@ export default function TasksPage() {
       </div>
 
       {/* Create Task Dialog */}
-      <Dialog open={isCreateDialogOpen} onValueChange={setIsCreateDialogOpen}>
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>创建新任务</DialogTitle>

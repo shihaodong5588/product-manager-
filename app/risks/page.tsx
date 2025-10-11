@@ -340,7 +340,7 @@ export default function RisksPage() {
 
   // Risk Matrix View
   const renderRiskMatrix = () => {
-    const matrix: Risk[][] = Array(5).fill(null).map(() => Array(5).fill(null).map(() => [] as Risk[]))
+    const matrix: Risk[][][] = Array(5).fill(null).map(() => Array(5).fill(null).map(() => [] as Risk[]))
 
     filteredRisks.forEach(risk => {
       const config = riskLevelConfig[risk.level]
