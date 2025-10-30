@@ -57,6 +57,32 @@ enum RiskLevel {
   CRITICAL
 }
 
+enum WorkCategory {
+  INDUSTRY_TRACKING      // 行业跟踪及竞对分析
+  PRODUCT_REQUIREMENT    // 产品需求分析及产品定义
+  PROJECT_MANAGEMENT     // 产品开发项目及生命周期管理
+  BUSINESS_SUPPORT       // 业务线支持及跨部门组织工作
+  PROFESSIONAL_LEARNING  // 专业能力学习
+  OTHER_TASKS           // 其它任务
+}
+
+enum WorkItemType {
+  REQUIREMENT  // 需求
+  DEFECT       // 缺陷
+  TASK         // 任务
+  IMPROVEMENT  // 改进
+}
+
+enum WorkItemStatus {
+  NEW
+  ASSIGNED
+  IN_PROGRESS
+  IN_REVIEW
+  RESOLVED
+  CLOSED
+  REJECTED
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -328,5 +354,53 @@ model Prototype {
   @@index([parentId])
   @@index([taskId])
   @@index([status])
+  @@index([createdAt])
+}
+
+// ============ 工作统计相关表 ============
+
+model WorkItem {
+  id              String           @id @default(cuid())
+  title           String
+  description     String?
+  workItemType    WorkItemType     @default(REQUIREMENT)
+  workCategory    WorkCategory     @default(PRODUCT_REQUIREMENT)
+  priority        Priority         @default(MEDIUM)
+  status          WorkItemStatus   @default(NEW)
+
+  // 工作项详细信息
+  assigneeId      String?
+  assigneeName    String?
+  reporterId      String?
+  reporterName    String?
+
+  // 时间跟踪
+  estimatedHours  Float?
+  actualHours     Float?
+  startDate       DateTime?
+  dueDate         DateTime?
+  completedDate   DateTime?
+
+  // 关联信息
+  projectId       String?
+  projectName     String?
+  version         String?
+  module          String?
+
+  // 其他字段
+  severity        String?          // 严重程度（针对缺陷）
+  tags            String[]         // 标签数组
+  attachments     String[]         // 附件URL数组
+  resolution      String?          // 解决方案
+  testResult      String?          // 测试结果
+  remarks         String?          // 备注
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([workCategory])
+  @@index([workItemType])
+  @@index([status])
+  @@index([assigneeId])
   @@index([createdAt])
 }

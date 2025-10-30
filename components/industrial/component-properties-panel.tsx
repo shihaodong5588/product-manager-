@@ -281,6 +281,59 @@ export default function ComponentPropertiesPanel({
                   <option value="right">右对齐</option>
                 </select>
               </div>
+              <div className="space-y-1 mb-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="showBorder" className="text-xs">
+                    显示边框
+                  </Label>
+                  <input
+                    id="showBorder"
+                    type="checkbox"
+                    checked={component.props.showBorder !== false}
+                    onChange={(e) => handlePropChange('showBorder', e.target.checked)}
+                    className="h-4 w-4 cursor-pointer"
+                  />
+                </div>
+              </div>
+              {component.props.showBorder !== false && (
+                <>
+                  <div className="space-y-1 mb-3">
+                    <Label htmlFor="borderColor" className="text-xs">
+                      边框颜色
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="borderColor"
+                        type="color"
+                        value={component.props.borderColor || '#e2e8f0'}
+                        onChange={(e) => handlePropChange('borderColor', e.target.value)}
+                        className="h-8 w-16"
+                      />
+                      <Input
+                        type="text"
+                        value={component.props.borderColor || '#e2e8f0'}
+                        onChange={(e) => handlePropChange('borderColor', e.target.value)}
+                        className="h-8 text-sm flex-1"
+                        placeholder="#e2e8f0"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1 mb-3">
+                    <Label htmlFor="borderWidth" className="text-xs">
+                      边框宽度 (px)
+                    </Label>
+                    <Input
+                      id="borderWidth"
+                      type="number"
+                      value={component.props.borderWidth || 1}
+                      onChange={(e) => handlePropChange('borderWidth', parseInt(e.target.value) || 1)}
+                      className="h-8 text-sm"
+                      min={0}
+                      max={10}
+                    />
+                  </div>
+                </>
+              )}
             </>
           )}
 
@@ -436,6 +489,9 @@ export default function ComponentPropertiesPanel({
                 />
               </div>
               <div className="space-y-1 mb-3">
+                <Label className="text-xs font-semibold">图标设置</Label>
+              </div>
+              <div className="space-y-1 mb-3">
                 <Label htmlFor="iconColor" className="text-xs">
                   图标颜色
                 </Label>
@@ -458,7 +514,7 @@ export default function ComponentPropertiesPanel({
               </div>
               <div className="space-y-1 mb-3">
                 <Label htmlFor="iconOpacity" className="text-xs">
-                  透明度: {((component.props.iconOpacity !== undefined ? component.props.iconOpacity : 1) * 100).toFixed(0)}%
+                  图标透明度: {((component.props.iconOpacity !== undefined ? component.props.iconOpacity : 1) * 100).toFixed(0)}%
                 </Label>
                 <Input
                   id="iconOpacity"
@@ -468,6 +524,45 @@ export default function ComponentPropertiesPanel({
                   step="0.01"
                   value={component.props.iconOpacity !== undefined ? component.props.iconOpacity : 1}
                   onChange={(e) => handlePropChange('iconOpacity', parseFloat(e.target.value))}
+                  className="h-8"
+                />
+              </div>
+              <div className="space-y-1 mb-3">
+                <Label className="text-xs font-semibold">背景设置</Label>
+              </div>
+              <div className="space-y-1 mb-3">
+                <Label htmlFor="bgColor" className="text-xs">
+                  背景颜色
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="bgColor"
+                    type="color"
+                    value={component.props.bgColor || '#1e293b'}
+                    onChange={(e) => handlePropChange('bgColor', e.target.value)}
+                    className="h-8 w-16"
+                  />
+                  <Input
+                    type="text"
+                    value={component.props.bgColor || '#1e293b'}
+                    onChange={(e) => handlePropChange('bgColor', e.target.value)}
+                    className="h-8 text-sm flex-1"
+                    placeholder="#1e293b"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1 mb-3">
+                <Label htmlFor="bgOpacity" className="text-xs">
+                  背景透明度: {((component.props.bgOpacity !== undefined ? component.props.bgOpacity : 0.5) * 100).toFixed(0)}%
+                </Label>
+                <Input
+                  id="bgOpacity"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={component.props.bgOpacity !== undefined ? component.props.bgOpacity : 0.5}
+                  onChange={(e) => handlePropChange('bgOpacity', parseFloat(e.target.value))}
                   className="h-8"
                 />
               </div>

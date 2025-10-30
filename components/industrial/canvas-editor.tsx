@@ -287,15 +287,26 @@ export default function CanvasEditor({
         )
         break
       case 'text':
+        const showBorder = component.props.showBorder !== false
+        const borderColor = component.props.borderColor || '#e2e8f0'
+        const borderWidth = component.props.borderWidth || 1
+
         content = (
-          <div className="w-full h-full flex items-center justify-center pointer-events-none">
+          <div
+            className="w-full h-full flex items-center justify-center pointer-events-none"
+            style={{
+              border: showBorder ? `${borderWidth}px solid ${borderColor}` : 'none',
+              borderRadius: showBorder ? '4px' : '0',
+            }}
+          >
             <span
-              className="font-sans"
+              className="font-sans px-2"
               style={{
                 fontSize: `${component.props.fontSize || 16}px`,
                 fontWeight: component.props.fontWeight || 400,
                 color: component.props.color || '#334155',
                 textAlign: component.props.textAlign || 'center',
+                width: '100%',
               }}
             >
               {component.props.text || '文本'}
@@ -307,13 +318,23 @@ export default function CanvasEditor({
         const iconSize = component.props.iconSize || 32
         const iconColor = component.props.iconColor || '#00ff00'
         const iconOpacity = component.props.iconOpacity !== undefined ? component.props.iconOpacity : 1
+        const bgColor = component.props.bgColor || '#1e293b'
+        const bgOpacity = component.props.bgOpacity !== undefined ? component.props.bgOpacity : 0.5
+
+        // 将颜色转换为rgba格式
+        const hexToRgba = (hex: string, alpha: number) => {
+          const r = parseInt(hex.slice(1, 3), 16)
+          const g = parseInt(hex.slice(3, 5), 16)
+          const b = parseInt(hex.slice(5, 7), 16)
+          return `rgba(${r}, ${g}, ${b}, ${alpha})`
+        }
 
         // 自定义图标
         if (component.props.iconType === 'custom' && component.props.customIconUrl) {
           content = (
             <div
-              className="w-full h-full flex items-center justify-center bg-slate-800/50 rounded-lg border-2 border-slate-600 hover:border-blue-400 transition-colors pointer-events-none"
-              style={{ opacity: iconOpacity }}
+              className="w-full h-full flex items-center justify-center rounded-lg border-2 border-slate-600 hover:border-blue-400 transition-colors pointer-events-none"
+              style={{ backgroundColor: hexToRgba(bgColor, bgOpacity) }}
             >
               <img
                 src={component.props.customIconUrl}
@@ -321,7 +342,7 @@ export default function CanvasEditor({
                 style={{
                   width: iconSize,
                   height: iconSize,
-                  filter: `brightness(0) saturate(100%) invert(${iconColor === '#00ff00' ? '1' : '0'})`,
+                  opacity: iconOpacity,
                 }}
               />
             </div>
@@ -347,14 +368,16 @@ export default function CanvasEditor({
 
           content = (
             <div
-              className="w-full h-full flex items-center justify-center bg-slate-800/50 rounded-lg border-2 border-slate-600 hover:border-blue-400 transition-colors pointer-events-none"
-              style={{ opacity: iconOpacity }}
+              className="w-full h-full flex items-center justify-center rounded-lg border-2 border-slate-600 hover:border-blue-400 transition-colors pointer-events-none"
+              style={{ backgroundColor: hexToRgba(bgColor, bgOpacity) }}
             >
-              <IconComponent
-                size={iconSize}
-                color={iconColor}
-                strokeWidth={2}
-              />
+              <div style={{ opacity: iconOpacity }}>
+                <IconComponent
+                  size={iconSize}
+                  color={iconColor}
+                  strokeWidth={2}
+                />
+              </div>
             </div>
           )
         }
