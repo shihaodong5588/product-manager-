@@ -8,6 +8,11 @@ const BUCKET_NAME = 'prototypes'
  * 注意：这个函数只需要在首次设置时运行一次
  */
 export async function initializeStorageBucket() {
+  if (!supabaseAdmin) {
+    console.warn('⚠️ Supabase not configured, skipping storage initialization')
+    return null
+  }
+
   try {
     // 检查 bucket 是否已存在
     const { data: buckets } = await supabaseAdmin.storage.listBuckets()
@@ -48,6 +53,10 @@ export async function uploadPrototypeImage(
   url: string
   size: number
 }> {
+  if (!supabaseAdmin) {
+    throw new Error('Supabase not configured')
+  }
+
   try {
     // 生成唯一文件名
     const fileExtension = filename?.split('.').pop() || 'png'
@@ -93,6 +102,11 @@ export async function uploadPrototypeImage(
  * @param filePath - 文件路径
  */
 export async function deletePrototypeImage(filePath: string): Promise<void> {
+  if (!supabaseAdmin) {
+    console.warn('⚠️ Supabase not configured, skipping image deletion')
+    return
+  }
+
   try {
     const { error } = await supabaseAdmin.storage
       .from(BUCKET_NAME)
@@ -111,6 +125,11 @@ export async function deletePrototypeImage(filePath: string): Promise<void> {
  * @param path - 文件夹路径（可选）
  */
 export async function listPrototypeImages(path?: string) {
+  if (!supabaseAdmin) {
+    console.warn('⚠️ Supabase not configured, returning empty list')
+    return []
+  }
+
   try {
     const { data, error } = await supabaseAdmin.storage
       .from(BUCKET_NAME)
