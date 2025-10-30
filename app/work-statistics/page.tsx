@@ -196,18 +196,24 @@ export default function WorkStatisticsPage() {
         actualHours: formData.actualHours ? parseFloat(formData.actualHours) : null,
       }
 
+      let response
       if (showEditDialog && selectedItem) {
-        await fetch(`/api/work-items/${selectedItem.id}`, {
+        response = await fetch(`/api/work-items/${selectedItem.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         })
       } else {
-        await fetch('/api/work-items', {
+        response = await fetch('/api/work-items', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         })
+      }
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: '保存失败' }))
+        throw new Error(error.error || '保存失败')
       }
 
       setShowAddDialog(false)
@@ -217,7 +223,7 @@ export default function WorkStatisticsPage() {
       fetchStatistics()
     } catch (error) {
       console.error('保存工作项失败:', error)
-      alert('保存失败')
+      alert(error instanceof Error ? error.message : '保存失败')
     }
   }
 
