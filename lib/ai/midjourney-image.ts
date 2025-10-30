@@ -212,7 +212,7 @@ export class MidjourneyImageService {
       return JSON.parse(responseText);
     } catch (error) {
       // 如果是网络错误且还有重试次数，则重试
-      if (retryCount < maxRetries && (error instanceof TypeError || error.name === 'AbortError')) {
+      if (retryCount < maxRetries && (error instanceof TypeError || (error as any)?.name === 'AbortError')) {
         console.warn(`⚠️ 提交失败，${retryCount + 1}/${maxRetries} 次重试...`);
         await this.sleep(3000); // 等待3秒后重试
         return this.submitTask(prompt, translate, retryCount + 1);
@@ -245,7 +245,7 @@ export class MidjourneyImageService {
       return await response.json();
     } catch (error) {
       // 如果是网络错误且还有重试次数，则重试
-      if (retryCount < maxRetries && (error instanceof TypeError || error.name === 'AbortError')) {
+      if (retryCount < maxRetries && (error instanceof TypeError || (error as any)?.name === 'AbortError')) {
         console.warn(`⚠️ 查询失败，${retryCount + 1}/${maxRetries} 次重试...`);
         await this.sleep(2000); // 等待2秒后重试
         return this.queryTaskStatus(taskId, retryCount + 1);

@@ -47,6 +47,20 @@ export async function POST(
     console.log(`Varying region for prototype: ${original.id}`)
     console.log(`Original task ID: ${original.taskId}`)
 
+    if (!original.taskId) {
+      return NextResponse.json(
+        { error: 'Original prototype missing taskId' },
+        { status: 400 }
+      )
+    }
+
+    if (!original.imageUrl) {
+      return NextResponse.json(
+        { error: 'Original prototype missing imageUrl' },
+        { status: 400 }
+      )
+    }
+
     const midjourneyService = createMidjourneyImageService()
 
     // 执行 Vary Region 操作

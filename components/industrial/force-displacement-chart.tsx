@@ -46,7 +46,7 @@ export default function ForceDisplacementChart({
       chartInstance.current = echarts.init(chartRef.current, 'dark')
     }
 
-    const option: EChartsOption = {
+    const option = {
       title: {
         text: title,
         left: 'center',
@@ -81,9 +81,9 @@ export default function ForceDisplacementChart({
         borderColor: '#1f1f1f',
       },
       xAxis: {
-        type: 'value',
+        type: 'value' as const,
         name: '位移 (mm)',
-        nameLocation: 'center',
+        nameLocation: 'center' as const,
         nameGap: 30,
         nameTextStyle: {
           color: '#00ff00',
@@ -108,9 +108,9 @@ export default function ForceDisplacementChart({
         },
       },
       yAxis: {
-        type: 'value',
+        type: 'value' as const,
         name: '力 (kN)',
-        nameLocation: 'center',
+        nameLocation: 'center' as const,
         nameGap: 50,
         nameTextStyle: {
           color: '#00ff00',
@@ -198,7 +198,7 @@ export default function ForceDisplacementChart({
       },
     }
 
-    chartInstance.current.setOption(option)
+    chartInstance.current.setOption(option as EChartsOption)
 
     // 响应式调整
     const handleResize = () => {

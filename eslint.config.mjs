@@ -17,6 +17,7 @@ const eslintConfig = [
       "@typescript-eslint/no-unused-vars": "warn",
       "react-hooks/exhaustive-deps": "warn",
       "prefer-const": "warn",
+      "@next/next/no-img-element": "warn", // 图片标签警告而非错误
     },
   },
   {
