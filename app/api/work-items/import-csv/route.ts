@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'CSV文件为空或格式不正确' }, { status: 400 })
     }
 
-    const headers = lines[0].split(',').map((h: string) => h.trim())
+    const headers: string[] = lines[0].split(',').map((h: string) => h.trim())
     const workItems = []
 
     for (let i = 1; i < lines.length; i++) {

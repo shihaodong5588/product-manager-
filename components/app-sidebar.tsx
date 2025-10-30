@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FileText, KanbanSquare, FolderKanban, Users, Target, AlertTriangle, Activity, Brain, Palette, PenTool } from 'lucide-react'
+import { LayoutDashboard, FileText, KanbanSquare, FolderKanban, Users, Target, AlertTriangle, Activity, Brain, Palette, PenTool, BarChart3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navigation = [
   { name: '概览', href: '/', icon: LayoutDashboard },
   { name: 'AI 助手', href: '/ai-assistant', icon: Brain },
   { name: '需求管理', href: '/requirements', icon: FileText },
+  { name: '工作统计', href: '/work-statistics', icon: BarChart3 },
   { name: '原型图', href: '/prototypes', icon: Palette },
   { name: '原型画布', href: '/canvas', icon: PenTool },
   { name: '任务看板', href: '/tasks', icon: KanbanSquare },
