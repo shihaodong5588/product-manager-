@@ -158,19 +158,91 @@ export default function ComponentPropertiesPanel({
 
           {/* 文本组件 */}
           {component.type === 'text' && (
-            <div className="space-y-1 mb-3">
-              <Label htmlFor="text" className="text-xs">
-                文本内容
-              </Label>
-              <Textarea
-                id="text"
-                value={component.props.text || ''}
-                onChange={(e) => handlePropChange('text', e.target.value)}
-                className="text-sm"
-                placeholder="输入文本内容"
-                rows={3}
-              />
-            </div>
+            <>
+              <div className="space-y-1 mb-3">
+                <Label htmlFor="text" className="text-xs">
+                  文本内容
+                </Label>
+                <Textarea
+                  id="text"
+                  value={component.props.text || ''}
+                  onChange={(e) => handlePropChange('text', e.target.value)}
+                  className="text-sm"
+                  placeholder="输入文本内容"
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="space-y-1">
+                  <Label htmlFor="fontSize" className="text-xs">
+                    字体大小 (px)
+                  </Label>
+                  <Input
+                    id="fontSize"
+                    type="number"
+                    value={component.props.fontSize || 16}
+                    onChange={(e) => handlePropChange('fontSize', parseInt(e.target.value) || 16)}
+                    className="h-8 text-sm"
+                    min={8}
+                    max={96}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="fontWeight" className="text-xs">
+                    字体粗细
+                  </Label>
+                  <select
+                    id="fontWeight"
+                    value={component.props.fontWeight || 400}
+                    onChange={(e) => handlePropChange('fontWeight', parseInt(e.target.value))}
+                    className="h-8 text-sm border rounded-md px-2 w-full"
+                  >
+                    <option value="300">细 (300)</option>
+                    <option value="400">正常 (400)</option>
+                    <option value="500">中等 (500)</option>
+                    <option value="600">半粗 (600)</option>
+                    <option value="700">粗 (700)</option>
+                    <option value="800">特粗 (800)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1 mb-3">
+                <Label htmlFor="color" className="text-xs">
+                  文字颜色
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="color"
+                    type="color"
+                    value={component.props.color || '#334155'}
+                    onChange={(e) => handlePropChange('color', e.target.value)}
+                    className="h-8 w-16"
+                  />
+                  <Input
+                    type="text"
+                    value={component.props.color || '#334155'}
+                    onChange={(e) => handlePropChange('color', e.target.value)}
+                    className="h-8 text-sm flex-1"
+                    placeholder="#334155"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1 mb-3">
+                <Label htmlFor="textAlign" className="text-xs">
+                  对齐方式
+                </Label>
+                <select
+                  id="textAlign"
+                  value={component.props.textAlign || 'center'}
+                  onChange={(e) => handlePropChange('textAlign', e.target.value)}
+                  className="h-8 text-sm border rounded-md px-2 w-full"
+                >
+                  <option value="left">左对齐</option>
+                  <option value="center">居中</option>
+                  <option value="right">右对齐</option>
+                </select>
+              </div>
+            </>
           )}
 
           {/* 参数显示组件 */}
@@ -234,6 +306,65 @@ export default function ComponentPropertiesPanel({
               />
             </div>
           )}
+
+          {/* 图标组件 */}
+          {component.type === 'icon' && (
+            <>
+              <div className="space-y-1 mb-3">
+                <Label htmlFor="iconType" className="text-xs">
+                  图标类型
+                </Label>
+                <select
+                  id="iconType"
+                  value={component.props.iconType || 'motor'}
+                  onChange={(e) => handlePropChange('iconType', e.target.value)}
+                  className="h-8 text-sm border rounded-md px-2 w-full"
+                >
+                  <option value="motor">⚙️ 电机</option>
+                  <option value="sensor">📡 传感器</option>
+                  <option value="valve">🔧 阀门</option>
+                  <option value="pump">⚡ 泵</option>
+                  <option value="warning">⚠️ 警告</option>
+                  <option value="power">🔌 电源</option>
+                </select>
+              </div>
+              <div className="space-y-1 mb-3">
+                <Label htmlFor="iconSize" className="text-xs">
+                  图标大小 (px)
+                </Label>
+                <Input
+                  id="iconSize"
+                  type="number"
+                  value={component.props.iconSize || 32}
+                  onChange={(e) => handlePropChange('iconSize', parseInt(e.target.value) || 32)}
+                  className="h-8 text-sm"
+                  min={16}
+                  max={128}
+                />
+              </div>
+              <div className="space-y-1 mb-3">
+                <Label htmlFor="iconColor" className="text-xs">
+                  图标颜色
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="iconColor"
+                    type="color"
+                    value={component.props.iconColor || '#00ff00'}
+                    onChange={(e) => handlePropChange('iconColor', e.target.value)}
+                    className="h-8 w-16"
+                  />
+                  <Input
+                    type="text"
+                    value={component.props.iconColor || '#00ff00'}
+                    onChange={(e) => handlePropChange('iconColor', e.target.value)}
+                    className="h-8 text-sm flex-1"
+                    placeholder="#00ff00"
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -252,6 +383,7 @@ function getComponentTypeName(type: string): string {
     gauge: '仪表盘',
     table: '表格',
     text: '文本',
+    icon: '图标',
   }
   return typeNames[type] || type
 }

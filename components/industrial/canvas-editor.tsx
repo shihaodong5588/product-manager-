@@ -15,6 +15,7 @@ export type ComponentType =
   | 'gauge'
   | 'table'
   | 'text'
+  | 'icon'
 
 export interface CanvasComponent {
   id: string
@@ -283,9 +284,38 @@ export default function CanvasEditor({
       case 'text':
         content = (
           <div className="w-full h-full flex items-center justify-center pointer-events-none">
-            <span className="text-slate-700 font-sans text-base">
+            <span
+              className="font-sans"
+              style={{
+                fontSize: `${component.props.fontSize || 16}px`,
+                fontWeight: component.props.fontWeight || 400,
+                color: component.props.color || '#334155',
+                textAlign: component.props.textAlign || 'center',
+              }}
+            >
               {component.props.text || '文本'}
             </span>
+          </div>
+        )
+        break
+      case 'icon':
+        content = (
+          <div className="w-full h-full flex items-center justify-center bg-slate-800/50 rounded-lg border-2 border-slate-600 hover:border-blue-400 transition-colors pointer-events-none">
+            <div
+              className="text-center"
+              style={{
+                fontSize: `${component.props.iconSize || 32}px`,
+                color: component.props.iconColor || '#00ff00',
+              }}
+            >
+              {component.props.iconType === 'motor' && '⚙️'}
+              {component.props.iconType === 'sensor' && '📡'}
+              {component.props.iconType === 'valve' && '🔧'}
+              {component.props.iconType === 'pump' && '⚡'}
+              {component.props.iconType === 'warning' && '⚠️'}
+              {component.props.iconType === 'power' && '🔌'}
+              {!component.props.iconType && '⚙️'}
+            </div>
           </div>
         )
         break
