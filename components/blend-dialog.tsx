@@ -90,7 +90,7 @@ export default function BlendDialog({
         throw new Error(error.details || '生成失败')
       }
 
-      const result = await response.json()
+      await response.json()
       toast.success('混合生成成功！')
 
       // 跳转到原型图列表

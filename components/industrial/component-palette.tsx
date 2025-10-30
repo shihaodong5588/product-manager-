@@ -3,7 +3,6 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 import { ComponentType } from './canvas-editor'
-import IndustrialButton from './industrial-button'
 
 interface ComponentPaletteProps {
   onAddComponent: (type: ComponentType) => void

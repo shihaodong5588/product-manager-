@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import ForceDisplacementChart, { DataPoint, EnvelopeCurve } from '@/components/industrial/force-displacement-chart'
 import ParameterDisplay from '@/components/industrial/parameter-display'
 import StatusIndicator from '@/components/industrial/status-indicator'
@@ -225,7 +225,7 @@ export default function DemoPage() {
             演示说明
           </h3>
           <div className="text-green-500/70 font-mono text-xs space-y-2">
-            <p>• 点击"启动压制"按钮查看模拟的压机工作过程</p>
+            <p>• 点击&ldquo;启动压制&rdquo;按钮查看模拟的压机工作过程</p>
             <p>• 曲线显示力-位移关系，橙色虚线为包络线（上下限）</p>
             <p>• 实时参数显示当前压力和位移值</p>
             <p>• 这是一个完全可定制的工业上位机界面示例</p>
