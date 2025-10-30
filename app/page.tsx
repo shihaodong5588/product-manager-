@@ -40,8 +40,19 @@ export default function Home() {
         fetch('/api/tasks'),
       ])
 
-      const requirements = await reqResponse.json()
-      const tasks = await taskResponse.json()
+      // 检查响应状态
+      let requirements = []
+      let tasks = []
+
+      if (reqResponse.ok) {
+        const reqData = await reqResponse.json()
+        requirements = Array.isArray(reqData) ? reqData : []
+      }
+
+      if (taskResponse.ok) {
+        const taskData = await taskResponse.json()
+        tasks = Array.isArray(taskData) ? taskData : []
+      }
 
       setStats({
         totalProjects: 0,
@@ -55,6 +66,17 @@ export default function Home() {
       })
     } catch (error) {
       console.error('Failed to fetch stats:', error)
+      // 设置默认值，避免崩溃
+      setStats({
+        totalProjects: 0,
+        totalRequirements: 0,
+        totalTasks: 0,
+        completedTasks: 0,
+        inProgressTasks: 0,
+        highPriorityTasks: 0,
+        todoTasks: 0,
+        inReviewTasks: 0,
+      })
     }
   }
 

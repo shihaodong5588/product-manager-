@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +9,39 @@ export async function POST(request: NextRequest) {
     const lines = csvData.trim().split('\n')
     if (lines.length < 2) {
       return NextResponse.json({ error: 'CSV文件为空或格式不正确' }, { status: 400 })
+    }
+
+    // 中文标签到枚举值的反向映射
+    const workCategoryMap: Record<string, string> = {
+      '行业跟踪及竞对分析': 'INDUSTRY_TRACKING',
+      '产品需求分析及产品定义': 'PRODUCT_REQUIREMENT',
+      '产品开发项目及生命周期管理': 'PROJECT_MANAGEMENT',
+      '业务线支持及跨部门组织工作': 'BUSINESS_SUPPORT',
+      '专业能力学习': 'PROFESSIONAL_LEARNING',
+      '其它任务': 'OTHER_TASKS',
+    }
+
+    const workItemTypeMap: Record<string, string> = {
+      '需求': 'REQUIREMENT',
+      '缺陷': 'DEFECT',
+      '任务': 'TASK',
+      '改进': 'IMPROVEMENT',
+    }
+
+    const priorityMap: Record<string, string> = {
+      '低': 'LOW',
+      '中': 'MEDIUM',
+      '高': 'HIGH',
+    }
+
+    const statusMap: Record<string, string> = {
+      '新建': 'NEW',
+      '已分配': 'ASSIGNED',
+      '进行中': 'IN_PROGRESS',
+      '审核中': 'IN_REVIEW',
+      '已解决': 'RESOLVED',
+      '已关闭': 'CLOSED',
+      '已拒绝': 'REJECTED',
     }
 
     const headers: string[] = lines[0].split(',').map((h: string) => h.trim())
@@ -31,16 +62,20 @@ export async function POST(request: NextRequest) {
             item.description = value || null
             break
           case '工作项类型':
-            item.workItemType = value || 'REQUIREMENT'
+            // 将中文标签转换为枚举值
+            item.workItemType = workItemTypeMap[value] || value || 'REQUIREMENT'
             break
           case '工作类别':
-            item.workCategory = value || 'PRODUCT_REQUIREMENT'
+            // 将中文标签转换为枚举值
+            item.workCategory = workCategoryMap[value] || value || 'PRODUCT_REQUIREMENT'
             break
           case '优先级':
-            item.priority = value || 'MEDIUM'
+            // 将中文标签转换为枚举值
+            item.priority = priorityMap[value] || value || 'MEDIUM'
             break
           case '状态':
-            item.status = value || 'NEW'
+            // 将中文标签转换为枚举值
+            item.status = statusMap[value] || value || 'NEW'
             break
           case '负责人':
             item.assigneeName = value || null
