@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { apiHandler } from '@/lib/api-middleware'
 
 export async function GET(request: NextRequest) {
-  try {
+  return apiHandler(async () => {
     // 获取所有工作项
     const workItems = await prisma.workItem.findMany()
     const total = workItems.length
@@ -87,8 +88,5 @@ export async function GET(request: NextRequest) {
       typeStats,
       statusStats,
     })
-  } catch (error) {
-    console.error('获取统计数据失败:', error)
-    return NextResponse.json({ error: '获取统计数据失败' }, { status: 500 })
-  }
+  }, { operationName: '获取工作项统计' })
 }

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { apiHandler } from '@/lib/api-middleware'
 
 // GET - 获取所有工作项（支持筛选和分页）
 export async function GET(request: NextRequest) {
-  try {
+  return apiHandler(async () => {
     const { searchParams } = new URL(request.url)
     const workCategory = searchParams.get('workCategory')
     const workItemType = searchParams.get('workItemType')
@@ -35,15 +36,12 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(total / pageSize),
       },
     })
-  } catch (error) {
-    console.error('获取工作项失败:', error)
-    return NextResponse.json({ error: '获取工作项失败' }, { status: 500 })
-  }
+  }, { operationName: '获取工作项列表' })
 }
 
 // POST - 创建新工作项
 export async function POST(request: NextRequest) {
-  try {
+  return apiHandler(async () => {
     const body = await request.json()
 
     const workItem = await prisma.workItem.create({
@@ -51,8 +49,5 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(workItem, { status: 201 })
-  } catch (error) {
-    console.error('创建工作项失败:', error)
-    return NextResponse.json({ error: '创建工作项失败' }, { status: 500 })
-  }
+  }, { operationName: '创建工作项' })
 }

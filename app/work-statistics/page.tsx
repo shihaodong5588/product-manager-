@@ -159,23 +159,45 @@ export default function WorkStatisticsPage() {
       if (filterStatus) params.append('status', filterStatus)
 
       const response = await fetch(`/api/work-items?${params}`)
+
+      // 检查响应状态
       if (!response.ok) {
-        throw new Error('获取数据失败')
+        const errorData = await response.json().catch(() => ({ error: '未知错误' }))
+
+        // 如果是503错误（数据库连接问题），自动重试
+        if (response.status === 503 && retryCount < 5) {
+          const delay = Math.min(1000 * Math.pow(1.5, retryCount), 10000)
+          console.log(`数据库连接中，${delay}ms后重试... (${retryCount + 1}/5)`)
+          setTimeout(() => fetchWorkItems(retryCount + 1), delay)
+          return
+        }
+
+        throw new Error(errorData.message || '获取数据失败')
       }
+
       const data = await response.json()
       setWorkItems(data.workItems || [])
-    } catch (error) {
+
+      // 成功后清除任何错误状态
+      if (retryCount > 0) {
+        console.log('✓ 数据加载成功')
+      }
+    } catch (error: any) {
       console.error('获取工作项失败:', error)
 
-      // 如果是首次失败且重试次数小于2，则自动重试
-      if (retryCount < 2) {
-        console.log(`重试获取数据... (${retryCount + 1}/2)`)
-        setTimeout(() => fetchWorkItems(retryCount + 1), 1000)
+      // 对于网络错误，也进行重试
+      if (retryCount < 5 && (error.message?.includes('fetch') || error.message?.includes('网络'))) {
+        const delay = Math.min(1000 * Math.pow(1.5, retryCount), 10000)
+        console.log(`网络错误，${delay}ms后重试... (${retryCount + 1}/5)`)
+        setTimeout(() => fetchWorkItems(retryCount + 1), delay)
         return
       }
 
-      setError('数据库连接失败，请检查数据库配置或运行 "npx prisma db push" 创建数据表')
-      setWorkItems([])
+      // 只在最后一次重试失败时才显示错误
+      if (retryCount >= 4) {
+        setError('无法连接到数据库服务。请稍后再试，或联系管理员。')
+        setWorkItems([])
+      }
     } finally {
       if (retryCount === 0) {
         setLoading(false)
@@ -186,18 +208,30 @@ export default function WorkStatisticsPage() {
   const fetchStatistics = async (retryCount = 0) => {
     try {
       const response = await fetch('/api/work-items/statistics')
+
       if (!response.ok) {
-        throw new Error('获取统计失败')
+        const errorData = await response.json().catch(() => ({ error: '未知错误' }))
+
+        // 如果是503错误（数据库连接问题），自动重试
+        if (response.status === 503 && retryCount < 5) {
+          const delay = Math.min(1000 * Math.pow(1.5, retryCount), 10000)
+          console.log(`统计数据连接中，${delay}ms后重试... (${retryCount + 1}/5)`)
+          setTimeout(() => fetchStatistics(retryCount + 1), delay)
+          return
+        }
+
+        throw new Error(errorData.message || '获取统计失败')
       }
+
       const data = await response.json()
       setStatistics(data)
-    } catch (error) {
+    } catch (error: any) {
       console.error('获取统计数据失败:', error)
 
-      // 如果是首次失败且重试次数小于2，则自动重试
-      if (retryCount < 2) {
-        console.log(`重试获取统计数据... (${retryCount + 1}/2)`)
-        setTimeout(() => fetchStatistics(retryCount + 1), 1000)
+      // 对于网络错误，也进行重试
+      if (retryCount < 5) {
+        const delay = Math.min(1000 * Math.pow(1.5, retryCount), 10000)
+        setTimeout(() => fetchStatistics(retryCount + 1), delay)
         return
       }
 
@@ -389,19 +423,28 @@ export default function WorkStatisticsPage() {
 
       {/* 错误提示 */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 mt-0.5">
-              <svg className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              <svg className="h-5 w-5 text-amber-600" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-medium text-red-800">数据库错误</h3>
-              <p className="mt-1 text-sm text-red-700">{error}</p>
-              <p className="mt-2 text-sm text-red-600">
-                提示：请在终端运行 <code className="bg-red-100 px-2 py-1 rounded">npx prisma db push</code> 来创建数据表
-              </p>
+              <h3 className="text-sm font-medium text-amber-800">连接失败</h3>
+              <p className="mt-1 text-sm text-amber-700">{error}</p>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => {
+                    setError(null)
+                    fetchWorkItems()
+                    fetchStatistics()
+                  }}
+                  className="text-sm bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-1 rounded"
+                >
+                  重新加载
+                </button>
+              </div>
             </div>
           </div>
         </div>
