@@ -19,6 +19,13 @@ export async function POST(request: NextRequest) {
       '业务线支持及跨部门组织工作': 'BUSINESS_SUPPORT',
       '专业能力学习': 'PROFESSIONAL_LEARNING',
       '其它任务': 'OTHER_TASKS',
+      // 添加更多常见别名
+      '1': 'INDUSTRY_TRACKING',
+      '2': 'PRODUCT_REQUIREMENT',
+      '3': 'PROJECT_MANAGEMENT',
+      '4': 'BUSINESS_SUPPORT',
+      '5': 'PROFESSIONAL_LEARNING',
+      '6': 'OTHER_TASKS',
     }
 
     const workItemTypeMap: Record<string, string> = {
@@ -26,12 +33,22 @@ export async function POST(request: NextRequest) {
       '缺陷': 'DEFECT',
       '任务': 'TASK',
       '改进': 'IMPROVEMENT',
+      // 添加更多常见别名
+      '软件开发': 'TASK',
+      '软硬件开发': 'TASK',
+      '软硬件开发P0': 'TASK',
+      '软硬件开发P1': 'TASK',
     }
 
     const priorityMap: Record<string, string> = {
       '低': 'LOW',
       '中': 'MEDIUM',
       '高': 'HIGH',
+      // 添加更多常见别名
+      'P0': 'HIGH',
+      'P1': 'MEDIUM',
+      'P2': 'LOW',
+      '待评审': 'MEDIUM',
     }
 
     const statusMap: Record<string, string> = {
@@ -42,11 +59,15 @@ export async function POST(request: NextRequest) {
       '已解决': 'RESOLVED',
       '已关闭': 'CLOSED',
       '已拒绝': 'REJECTED',
+      // 添加更多常见别名
+      '待开始': 'NEW',
+      '待评审': 'IN_REVIEW',
     }
 
     const headers: string[] = lines[0].split(',').map((h: string) => h.trim())
     const workItems = []
     const skippedRows: Array<{ row: number; reason: string }> = []
+    const unmappedValues: Array<{ row: number; field: string; value: string; usedDefault: string }> = []
 
     // 字段别名映射 - 支持不同的列名
     const fieldAliases: Record<string, string[]> = {
@@ -105,21 +126,33 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      // 工作项类型
+      // 工作项类型 - 只使用映射值或默认值，不使用原值
       const workItemTypeValue = getValue('workItemType')
-      item.workItemType = workItemTypeMap[workItemTypeValue] || workItemTypeValue || 'REQUIREMENT'
+      if (workItemTypeValue && !workItemTypeMap[workItemTypeValue]) {
+        unmappedValues.push({ row: i + 1, field: '工作项类型', value: workItemTypeValue, usedDefault: 'REQUIREMENT (任务)' })
+      }
+      item.workItemType = (workItemTypeValue && workItemTypeMap[workItemTypeValue]) || 'REQUIREMENT'
 
-      // 工作类别
+      // 工作类别 - 只使用映射值或默认值，不使用原值
       const workCategoryValue = getValue('workCategory')
-      item.workCategory = workCategoryMap[workCategoryValue] || workCategoryValue || 'PRODUCT_REQUIREMENT'
+      if (workCategoryValue && !workCategoryMap[workCategoryValue]) {
+        unmappedValues.push({ row: i + 1, field: '工作类别', value: workCategoryValue, usedDefault: 'PRODUCT_REQUIREMENT (产品需求分析及产品定义)' })
+      }
+      item.workCategory = (workCategoryValue && workCategoryMap[workCategoryValue]) || 'PRODUCT_REQUIREMENT'
 
-      // 优先级
+      // 优先级 - 只使用映射值或默认值，不使用原值
       const priorityValue = getValue('priority')
-      item.priority = priorityMap[priorityValue] || priorityValue || 'MEDIUM'
+      if (priorityValue && !priorityMap[priorityValue]) {
+        unmappedValues.push({ row: i + 1, field: '优先级', value: priorityValue, usedDefault: 'MEDIUM (中)' })
+      }
+      item.priority = (priorityValue && priorityMap[priorityValue]) || 'MEDIUM'
 
-      // 状态
+      // 状态 - 只使用映射值或默认值，不使用原值
       const statusValue = getValue('status')
-      item.status = statusMap[statusValue] || statusValue || 'NEW'
+      if (statusValue && !statusMap[statusValue]) {
+        unmappedValues.push({ row: i + 1, field: '状态', value: statusValue, usedDefault: 'NEW (新建)' })
+      }
+      item.status = (statusValue && statusMap[statusValue]) || 'NEW'
 
       // 其他字段
       item.assigneeName = getValue('assigneeName') || null
@@ -148,15 +181,20 @@ export async function POST(request: NextRequest) {
       skipDuplicates: true,
     })
 
-    const message = skippedRows.length > 0
-      ? `成功导入 ${created.count} 个工作项，跳过 ${skippedRows.length} 行`
-      : `成功导入 ${created.count} 个工作项`
+    let message = `成功导入 ${created.count} 个工作项`
+    if (skippedRows.length > 0) {
+      message += `，跳过 ${skippedRows.length} 行`
+    }
+    if (unmappedValues.length > 0) {
+      message += `，${unmappedValues.length} 个字段值使用了默认值`
+    }
 
     return NextResponse.json({
       message,
       count: created.count,
       totalRows: lines.length - 1,
       skippedRows,
+      unmappedValues,
       columnMapping: columnMap,
     })
   } catch (error) {
