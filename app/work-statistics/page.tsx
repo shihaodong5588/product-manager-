@@ -142,11 +142,15 @@ export default function WorkStatisticsPage() {
   ]
 
   useEffect(() => {
-    fetchWorkItems()
-    fetchStatistics()
+    // 序列化请求，避免并发连接争用
+    const fetchData = async () => {
+      await fetchWorkItems()
+      await fetchStatistics()
+    }
+    fetchData()
   }, [filterCategory, filterType, filterStatus])
 
-  const fetchWorkItems = async () => {
+  const fetchWorkItems = async (retryCount = 0) => {
     try {
       setError(null)
       const params = new URLSearchParams()
@@ -162,14 +166,24 @@ export default function WorkStatisticsPage() {
       setWorkItems(data.workItems || [])
     } catch (error) {
       console.error('获取工作项失败:', error)
+
+      // 如果是首次失败且重试次数小于2，则自动重试
+      if (retryCount < 2) {
+        console.log(`重试获取数据... (${retryCount + 1}/2)`)
+        setTimeout(() => fetchWorkItems(retryCount + 1), 1000)
+        return
+      }
+
       setError('数据库连接失败，请检查数据库配置或运行 "npx prisma db push" 创建数据表')
       setWorkItems([])
     } finally {
-      setLoading(false)
+      if (retryCount === 0) {
+        setLoading(false)
+      }
     }
   }
 
-  const fetchStatistics = async () => {
+  const fetchStatistics = async (retryCount = 0) => {
     try {
       const response = await fetch('/api/work-items/statistics')
       if (!response.ok) {
@@ -179,6 +193,14 @@ export default function WorkStatisticsPage() {
       setStatistics(data)
     } catch (error) {
       console.error('获取统计数据失败:', error)
+
+      // 如果是首次失败且重试次数小于2，则自动重试
+      if (retryCount < 2) {
+        console.log(`重试获取统计数据... (${retryCount + 1}/2)`)
+        setTimeout(() => fetchStatistics(retryCount + 1), 1000)
+        return
+      }
+
       setStatistics({
         total: 0,
         categoryStats: [],

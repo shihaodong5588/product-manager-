@@ -16,15 +16,15 @@ export async function GET(request: NextRequest) {
     if (workItemType) where.workItemType = workItemType
     if (status) where.status = status
 
-    const [workItems, total] = await Promise.all([
-      prisma.workItem.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      prisma.workItem.count({ where }),
-    ])
+    // 顺序执行查询，避免连接争用
+    const workItems = await prisma.workItem.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    })
+
+    const total = await prisma.workItem.count({ where })
 
     return NextResponse.json({
       workItems,
