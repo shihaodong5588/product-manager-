@@ -198,7 +198,7 @@ export default function ForceDisplacementChart({
       },
     }
 
-    chartInstance.current.setOption(option as EChartsOption)
+    chartInstance.current.setOption(option as unknown as EChartsOption)
 
     // 响应式调整
     const handleResize = () => {
