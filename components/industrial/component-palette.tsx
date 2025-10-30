@@ -81,6 +81,12 @@ const componentTypes: Array<{
     icon: '⚙️',
     defaultSize: { width: 80, height: 80 },
   },
+  {
+    type: 'arrow',
+    label: '指示箭头',
+    icon: '➡️',
+    defaultSize: { width: 150, height: 50 },
+  },
 ]
 
 export default function ComponentPalette({ onAddComponent, className }: ComponentPaletteProps) {

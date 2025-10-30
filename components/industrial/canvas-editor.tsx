@@ -2,7 +2,11 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Settings, Radio, Gauge as GaugeIcon, Zap, AlertTriangle, Power } from 'lucide-react'
+import {
+  ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
+  Settings, Radio, Gauge as GaugeIcon, Zap, AlertTriangle, Power,
+  FileText, File, Table2, List, Edit3, Save, Printer, Clipboard
+} from 'lucide-react'
 
 export type ComponentType =
   | 'force-displacement-chart'
@@ -16,6 +20,7 @@ export type ComponentType =
   | 'table'
   | 'text'
   | 'icon'
+  | 'arrow'
 
 export interface CanvasComponent {
   id: string
@@ -330,6 +335,14 @@ export default function CanvasEditor({
             component.props.iconType === 'pump' ? Zap :
             component.props.iconType === 'warning' ? AlertTriangle :
             component.props.iconType === 'power' ? Power :
+            component.props.iconType === 'file-text' ? FileText :
+            component.props.iconType === 'document' ? File :
+            component.props.iconType === 'table' ? Table2 :
+            component.props.iconType === 'list' ? List :
+            component.props.iconType === 'edit' ? Edit3 :
+            component.props.iconType === 'save' ? Save :
+            component.props.iconType === 'print' ? Printer :
+            component.props.iconType === 'clipboard' ? Clipboard :
             Settings
 
           content = (
@@ -345,6 +358,50 @@ export default function CanvasEditor({
             </div>
           )
         }
+        break
+      case 'arrow':
+        const arrowDirection = component.props.direction || 'right'
+        const arrowColor = component.props.arrowColor || '#00ff00'
+        const arrowThickness = component.props.arrowThickness || 3
+        const arrowOpacity = component.props.arrowOpacity !== undefined ? component.props.arrowOpacity : 1
+
+        // 根据方向绘制箭头
+        const getArrowPath = () => {
+          const w = component.width
+          const h = component.height
+          const thick = arrowThickness
+
+          switch (arrowDirection) {
+            case 'right':
+              return `M ${thick} ${h/2} L ${w-h/3} ${h/2} M ${w-h/3} ${thick} L ${w-thick} ${h/2} L ${w-h/3} ${h-thick}`
+            case 'left':
+              return `M ${w-thick} ${h/2} L ${h/3} ${h/2} M ${h/3} ${thick} L ${thick} ${h/2} L ${h/3} ${h-thick}`
+            case 'up':
+              return `M ${w/2} ${h-thick} L ${w/2} ${h/3} M ${thick} ${h/3} L ${w/2} ${thick} L ${w-thick} ${h/3}`
+            case 'down':
+              return `M ${w/2} ${thick} L ${w/2} ${h-h/3} M ${thick} ${h-h/3} L ${w/2} ${h-thick} L ${w-thick} ${h-h/3}`
+            default:
+              return `M ${thick} ${h/2} L ${w-h/3} ${h/2} M ${w-h/3} ${thick} L ${w-thick} ${h/2} L ${w-h/3} ${h-thick}`
+          }
+        }
+
+        content = (
+          <div
+            className="w-full h-full flex items-center justify-center pointer-events-none"
+            style={{ opacity: arrowOpacity }}
+          >
+            <svg width="100%" height="100%" className="pointer-events-none">
+              <path
+                d={getArrowPath()}
+                stroke={arrowColor}
+                strokeWidth={arrowThickness}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+            </svg>
+          </div>
+        )
         break
       default:
         content = (

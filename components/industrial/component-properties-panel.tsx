@@ -7,15 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { Trash2, Sparkles, Loader2 } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+import { Trash2, Upload } from 'lucide-react'
 
 interface ComponentPropertiesPanelProps {
   component: CanvasComponent | null
@@ -28,46 +20,42 @@ export default function ComponentPropertiesPanel({
   onUpdate,
   onDelete,
 }: ComponentPropertiesPanelProps) {
-  const [isGeneratingIcon, setIsGeneratingIcon] = useState(false)
-  const [iconPrompt, setIconPrompt] = useState('')
-  const [generatedIconUrl, setGeneratedIconUrl] = useState('')
-  const [showIconDialog, setShowIconDialog] = useState(false)
+  const [uploadingIcon, setUploadingIcon] = useState(false)
 
-  const handleGenerateIcon = async () => {
-    if (!iconPrompt.trim()) return
+  const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !component) return
 
-    setIsGeneratingIcon(true)
-    try {
-      const response = await fetch('/api/ai/generate-icon', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: iconPrompt }),
-      })
-
-      if (!response.ok) throw new Error('生成失败')
-
-      const data = await response.json()
-      setGeneratedIconUrl(data.iconUrl)
-    } catch (error) {
-      console.error('生成图标失败:', error)
-      alert('生成图标失败，请重试')
-    } finally {
-      setIsGeneratingIcon(false)
+    // 检查文件类型
+    if (!file.type.startsWith('image/')) {
+      alert('请上传图片文件')
+      return
     }
-  }
 
-  const handleApplyGeneratedIcon = () => {
-    if (component && generatedIconUrl) {
-      onUpdate(component.id, {
-        props: {
-          ...component.props,
-          customIconUrl: generatedIconUrl,
-          iconType: 'custom',
-        },
-      })
-      setShowIconDialog(false)
-      setGeneratedIconUrl('')
-      setIconPrompt('')
+    setUploadingIcon(true)
+    try {
+      // 转换为base64
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        const imageUrl = event.target?.result as string
+        onUpdate(component.id, {
+          props: {
+            ...component.props,
+            customIconUrl: imageUrl,
+            iconType: 'custom',
+          },
+        })
+        setUploadingIcon(false)
+      }
+      reader.onerror = () => {
+        alert('上传失败，请重试')
+        setUploadingIcon(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (error) {
+      console.error('上传图标失败:', error)
+      alert('上传图标失败，请重试')
+      setUploadingIcon(false)
     }
   }
 
@@ -371,78 +359,67 @@ export default function ComponentPropertiesPanel({
                   onChange={(e) => handlePropChange('iconType', e.target.value)}
                   className="h-8 text-sm border rounded-md px-2 w-full"
                 >
-                  <option value="motor">⚙️ 电机</option>
-                  <option value="sensor">📡 传感器</option>
-                  <option value="valve">🔧 阀门</option>
-                  <option value="pump">⚡ 泵</option>
-                  <option value="warning">⚠️ 警告</option>
-                  <option value="power">🔌 电源</option>
-                  {component.props.customIconUrl && <option value="custom">🎨 自定义图标</option>}
+                  <optgroup label="工业设备">
+                    <option value="motor">⚙️ 电机</option>
+                    <option value="sensor">📡 传感器</option>
+                    <option value="valve">🔧 阀门</option>
+                    <option value="pump">⚡ 泵</option>
+                    <option value="warning">⚠️ 警告</option>
+                    <option value="power">🔌 电源</option>
+                  </optgroup>
+                  <optgroup label="文字处理">
+                    <option value="file-text">📄 文本文件</option>
+                    <option value="document">📃 文档</option>
+                    <option value="table">📊 表格</option>
+                    <option value="list">📋 列表</option>
+                    <option value="edit">✏️ 编辑</option>
+                    <option value="save">💾 保存</option>
+                    <option value="print">🖨️ 打印</option>
+                    <option value="clipboard">📎 剪贴板</option>
+                  </optgroup>
+                  {component.props.customIconUrl && (
+                    <optgroup label="自定义">
+                      <option value="custom">🎨 自定义图标</option>
+                    </optgroup>
+                  )}
                 </select>
               </div>
 
-              {/* AI生成图标按钮 */}
+              {/* 上传自定义图标按钮 */}
               <div className="mb-3">
-                <Dialog open={showIconDialog} onOpenChange={setShowIconDialog}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full">
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      AI生成图标
+                <Label className="text-xs mb-2 block">自定义图标</Label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleIconUpload}
+                    className="hidden"
+                    id="icon-upload"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => document.getElementById('icon-upload')?.click()}
+                    disabled={uploadingIcon}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {uploadingIcon ? '上传中...' : '上传图标'}
+                  </Button>
+                </div>
+                {component.props.customIconUrl && (
+                  <div className="mt-2 p-2 border rounded-lg bg-slate-50 flex items-center justify-between">
+                    <span className="text-xs text-slate-600">已上传自定义图标</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handlePropChange('customIconUrl', '')}
+                      className="h-6 text-xs"
+                    >
+                      删除
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>AI生成自定义图标</DialogTitle>
-                      <DialogDescription>
-                        描述你想要的工业图标，AI将为你生成
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="icon-prompt">图标描述</Label>
-                        <Textarea
-                          id="icon-prompt"
-                          placeholder="例如: 一个简约的工业阀门图标，线条风格，适合深色背景"
-                          value={iconPrompt}
-                          onChange={(e) => setIconPrompt(e.target.value)}
-                          rows={3}
-                        />
-                      </div>
-                      <Button
-                        onClick={handleGenerateIcon}
-                        disabled={isGeneratingIcon || !iconPrompt.trim()}
-                        className="w-full"
-                      >
-                        {isGeneratingIcon ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            生成中...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="h-4 w-4 mr-2" />
-                            生成图标
-                          </>
-                        )}
-                      </Button>
-                      {generatedIconUrl && (
-                        <div className="space-y-2">
-                          <Label>生成结果</Label>
-                          <div className="border rounded-lg p-4 bg-slate-800 flex items-center justify-center">
-                            <img
-                              src={generatedIconUrl}
-                              alt="Generated icon"
-                              className="max-w-[200px] max-h-[200px]"
-                            />
-                          </div>
-                          <Button onClick={handleApplyGeneratedIcon} className="w-full">
-                            应用此图标
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                  </div>
+                )}
               </div>
               <div className="space-y-1 mb-3">
                 <Label htmlFor="iconSize" className="text-xs">
@@ -496,6 +473,78 @@ export default function ComponentPropertiesPanel({
               </div>
             </>
           )}
+
+          {/* 箭头组件 */}
+          {component.type === 'arrow' && (
+            <>
+              <div className="space-y-1 mb-3">
+                <Label htmlFor="direction" className="text-xs">
+                  箭头方向
+                </Label>
+                <select
+                  id="direction"
+                  value={component.props.direction || 'right'}
+                  onChange={(e) => handlePropChange('direction', e.target.value)}
+                  className="h-8 text-sm border rounded-md px-2 w-full"
+                >
+                  <option value="right">→ 右</option>
+                  <option value="left">← 左</option>
+                  <option value="up">↑ 上</option>
+                  <option value="down">↓ 下</option>
+                </select>
+              </div>
+              <div className="space-y-1 mb-3">
+                <Label htmlFor="arrowColor" className="text-xs">
+                  箭头颜色
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="arrowColor"
+                    type="color"
+                    value={component.props.arrowColor || '#00ff00'}
+                    onChange={(e) => handlePropChange('arrowColor', e.target.value)}
+                    className="h-8 w-16"
+                  />
+                  <Input
+                    type="text"
+                    value={component.props.arrowColor || '#00ff00'}
+                    onChange={(e) => handlePropChange('arrowColor', e.target.value)}
+                    className="h-8 text-sm flex-1"
+                    placeholder="#00ff00"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1 mb-3">
+                <Label htmlFor="arrowThickness" className="text-xs">
+                  箭头粗细 (px)
+                </Label>
+                <Input
+                  id="arrowThickness"
+                  type="number"
+                  value={component.props.arrowThickness || 3}
+                  onChange={(e) => handlePropChange('arrowThickness', parseInt(e.target.value) || 3)}
+                  className="h-8 text-sm"
+                  min={1}
+                  max={10}
+                />
+              </div>
+              <div className="space-y-1 mb-3">
+                <Label htmlFor="arrowOpacity" className="text-xs">
+                  透明度: {((component.props.arrowOpacity !== undefined ? component.props.arrowOpacity : 1) * 100).toFixed(0)}%
+                </Label>
+                <Input
+                  id="arrowOpacity"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={component.props.arrowOpacity !== undefined ? component.props.arrowOpacity : 1}
+                  onChange={(e) => handlePropChange('arrowOpacity', parseFloat(e.target.value))}
+                  className="h-8"
+                />
+              </div>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -515,6 +564,7 @@ function getComponentTypeName(type: string): string {
     table: '表格',
     text: '文本',
     icon: '图标',
+    arrow: '指示箭头',
   }
   return typeNames[type] || type
 }
