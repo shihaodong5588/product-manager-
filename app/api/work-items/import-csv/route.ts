@@ -46,76 +46,100 @@ export async function POST(request: NextRequest) {
 
     const headers: string[] = lines[0].split(',').map((h: string) => h.trim())
     const workItems = []
+    const skippedRows: Array<{ row: number; reason: string }> = []
+
+    // 字段别名映射 - 支持不同的列名
+    const fieldAliases: Record<string, string[]> = {
+      title: ['标题', '描述', '名称', '工作项名称'],
+      description: ['描述', '详细描述', '说明'],
+      workItemType: ['工作项类型', '类型'],
+      workCategory: ['工作类别', '类别', '分类'],
+      priority: ['优先级'],
+      status: ['状态'],
+      assigneeName: ['负责人', '指派给'],
+      reporterName: ['报告人', '创建人'],
+      estimatedHours: ['预估工时', '预计工时'],
+      actualHours: ['实际工时'],
+      projectName: ['项目', '项目名称'],
+      version: ['版本'],
+      module: ['模块'],
+      severity: ['严重程度'],
+      resolution: ['解决方案'],
+      testResult: ['测试结果'],
+      remarks: ['备注', '说明', '注释']
+    }
+
+    // 建立列索引映射
+    const columnMap: Record<string, number> = {}
+    headers.forEach((header, index) => {
+      for (const [field, aliases] of Object.entries(fieldAliases)) {
+        if (aliases.includes(header)) {
+          if (!columnMap[field]) {
+            columnMap[field] = index
+          }
+        }
+      }
+    })
 
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',').map((v: string) => v.trim())
       const item: any = {}
 
-      headers.forEach((header, index) => {
-        const value = values[index]
-        // 映射CSV字段到数据库字段
-        switch (header) {
-          case '标题':
-            item.title = value
-            break
-          case '描述':
-            item.description = value || null
-            break
-          case '工作项类型':
-            // 将中文标签转换为枚举值
-            item.workItemType = workItemTypeMap[value] || value || 'REQUIREMENT'
-            break
-          case '工作类别':
-            // 将中文标签转换为枚举值
-            item.workCategory = workCategoryMap[value] || value || 'PRODUCT_REQUIREMENT'
-            break
-          case '优先级':
-            // 将中文标签转换为枚举值
-            item.priority = priorityMap[value] || value || 'MEDIUM'
-            break
-          case '状态':
-            // 将中文标签转换为枚举值
-            item.status = statusMap[value] || value || 'NEW'
-            break
-          case '负责人':
-            item.assigneeName = value || null
-            break
-          case '报告人':
-            item.reporterName = value || null
-            break
-          case '预估工时':
-            item.estimatedHours = value ? parseFloat(value) : null
-            break
-          case '实际工时':
-            item.actualHours = value ? parseFloat(value) : null
-            break
-          case '项目':
-            item.projectName = value || null
-            break
-          case '版本':
-            item.version = value || null
-            break
-          case '模块':
-            item.module = value || null
-            break
-          case '严重程度':
-            item.severity = value || null
-            break
-          case '解决方案':
-            item.resolution = value || null
-            break
-          case '测试结果':
-            item.testResult = value || null
-            break
-          case '备注':
-            item.remarks = value || null
-            break
-        }
-      })
-
-      if (item.title) {
-        workItems.push(item)
+      // 使用映射获取值
+      const getValue = (field: string) => {
+        const index = columnMap[field]
+        return index !== undefined ? values[index] : undefined
       }
+
+      // 标题字段 - 优先使用"标题"，其次"描述"
+      const titleValue = getValue('title')
+      if (titleValue) {
+        item.title = titleValue
+        // 如果有单独的描述列，使用它
+        const descValue = getValue('description')
+        if (descValue && descValue !== titleValue) {
+          item.description = descValue
+        }
+      } else {
+        skippedRows.push({ row: i + 1, reason: '缺少标题或描述字段' })
+        continue
+      }
+
+      // 工作项类型
+      const workItemTypeValue = getValue('workItemType')
+      item.workItemType = workItemTypeMap[workItemTypeValue] || workItemTypeValue || 'REQUIREMENT'
+
+      // 工作类别
+      const workCategoryValue = getValue('workCategory')
+      item.workCategory = workCategoryMap[workCategoryValue] || workCategoryValue || 'PRODUCT_REQUIREMENT'
+
+      // 优先级
+      const priorityValue = getValue('priority')
+      item.priority = priorityMap[priorityValue] || priorityValue || 'MEDIUM'
+
+      // 状态
+      const statusValue = getValue('status')
+      item.status = statusMap[statusValue] || statusValue || 'NEW'
+
+      // 其他字段
+      item.assigneeName = getValue('assigneeName') || null
+      item.reporterName = getValue('reporterName') || null
+
+      const estimatedHours = getValue('estimatedHours')
+      item.estimatedHours = estimatedHours ? parseFloat(estimatedHours) : null
+
+      const actualHours = getValue('actualHours')
+      item.actualHours = actualHours ? parseFloat(actualHours) : null
+
+      item.projectName = getValue('projectName') || null
+      item.version = getValue('version') || null
+      item.module = getValue('module') || null
+      item.severity = getValue('severity') || null
+      item.resolution = getValue('resolution') || null
+      item.testResult = getValue('testResult') || null
+      item.remarks = getValue('remarks') || null
+
+      workItems.push(item)
     }
 
     // 批量创建工作项
@@ -124,9 +148,16 @@ export async function POST(request: NextRequest) {
       skipDuplicates: true,
     })
 
+    const message = skippedRows.length > 0
+      ? `成功导入 ${created.count} 个工作项，跳过 ${skippedRows.length} 行`
+      : `成功导入 ${created.count} 个工作项`
+
     return NextResponse.json({
-      message: `成功导入 ${created.count} 个工作项`,
+      message,
       count: created.count,
+      totalRows: lines.length - 1,
+      skippedRows,
+      columnMapping: columnMap,
     })
   } catch (error) {
     console.error('导入CSV失败:', error)
