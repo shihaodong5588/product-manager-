@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Settings, Radio, Gauge as GaugeIcon, Zap, AlertTriangle, Power } from 'lucide-react'
 
 export type ComponentType =
   | 'force-displacement-chart'
@@ -299,25 +299,52 @@ export default function CanvasEditor({
         )
         break
       case 'icon':
-        content = (
-          <div className="w-full h-full flex items-center justify-center bg-slate-800/50 rounded-lg border-2 border-slate-600 hover:border-blue-400 transition-colors pointer-events-none">
+        const iconSize = component.props.iconSize || 32
+        const iconColor = component.props.iconColor || '#00ff00'
+        const iconOpacity = component.props.iconOpacity !== undefined ? component.props.iconOpacity : 1
+
+        // 自定义图标
+        if (component.props.iconType === 'custom' && component.props.customIconUrl) {
+          content = (
             <div
-              className="text-center"
-              style={{
-                fontSize: `${component.props.iconSize || 32}px`,
-                color: component.props.iconColor || '#00ff00',
-              }}
+              className="w-full h-full flex items-center justify-center bg-slate-800/50 rounded-lg border-2 border-slate-600 hover:border-blue-400 transition-colors pointer-events-none"
+              style={{ opacity: iconOpacity }}
             >
-              {component.props.iconType === 'motor' && '⚙️'}
-              {component.props.iconType === 'sensor' && '📡'}
-              {component.props.iconType === 'valve' && '🔧'}
-              {component.props.iconType === 'pump' && '⚡'}
-              {component.props.iconType === 'warning' && '⚠️'}
-              {component.props.iconType === 'power' && '🔌'}
-              {!component.props.iconType && '⚙️'}
+              <img
+                src={component.props.customIconUrl}
+                alt="Custom icon"
+                style={{
+                  width: iconSize,
+                  height: iconSize,
+                  filter: `brightness(0) saturate(100%) invert(${iconColor === '#00ff00' ? '1' : '0'})`,
+                }}
+              />
             </div>
-          </div>
-        )
+          )
+        } else {
+          // 预设图标
+          const IconComponent =
+            component.props.iconType === 'motor' ? Settings :
+            component.props.iconType === 'sensor' ? Radio :
+            component.props.iconType === 'valve' ? GaugeIcon :
+            component.props.iconType === 'pump' ? Zap :
+            component.props.iconType === 'warning' ? AlertTriangle :
+            component.props.iconType === 'power' ? Power :
+            Settings
+
+          content = (
+            <div
+              className="w-full h-full flex items-center justify-center bg-slate-800/50 rounded-lg border-2 border-slate-600 hover:border-blue-400 transition-colors pointer-events-none"
+              style={{ opacity: iconOpacity }}
+            >
+              <IconComponent
+                size={iconSize}
+                color={iconColor}
+                strokeWidth={2}
+              />
+            </div>
+          )
+        }
         break
       default:
         content = (

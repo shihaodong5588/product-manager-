@@ -1,13 +1,21 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { CanvasComponent } from './canvas-editor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Sparkles, Loader2 } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 
 interface ComponentPropertiesPanelProps {
   component: CanvasComponent | null
@@ -20,6 +28,49 @@ export default function ComponentPropertiesPanel({
   onUpdate,
   onDelete,
 }: ComponentPropertiesPanelProps) {
+  const [isGeneratingIcon, setIsGeneratingIcon] = useState(false)
+  const [iconPrompt, setIconPrompt] = useState('')
+  const [generatedIconUrl, setGeneratedIconUrl] = useState('')
+  const [showIconDialog, setShowIconDialog] = useState(false)
+
+  const handleGenerateIcon = async () => {
+    if (!iconPrompt.trim()) return
+
+    setIsGeneratingIcon(true)
+    try {
+      const response = await fetch('/api/ai/generate-icon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: iconPrompt }),
+      })
+
+      if (!response.ok) throw new Error('生成失败')
+
+      const data = await response.json()
+      setGeneratedIconUrl(data.iconUrl)
+    } catch (error) {
+      console.error('生成图标失败:', error)
+      alert('生成图标失败，请重试')
+    } finally {
+      setIsGeneratingIcon(false)
+    }
+  }
+
+  const handleApplyGeneratedIcon = () => {
+    if (component && generatedIconUrl) {
+      onUpdate(component.id, {
+        props: {
+          ...component.props,
+          customIconUrl: generatedIconUrl,
+          iconType: 'custom',
+        },
+      })
+      setShowIconDialog(false)
+      setGeneratedIconUrl('')
+      setIconPrompt('')
+    }
+  }
+
   if (!component) {
     return (
       <Card>
@@ -326,7 +377,72 @@ export default function ComponentPropertiesPanel({
                   <option value="pump">⚡ 泵</option>
                   <option value="warning">⚠️ 警告</option>
                   <option value="power">🔌 电源</option>
+                  {component.props.customIconUrl && <option value="custom">🎨 自定义图标</option>}
                 </select>
+              </div>
+
+              {/* AI生成图标按钮 */}
+              <div className="mb-3">
+                <Dialog open={showIconDialog} onOpenChange={setShowIconDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full">
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      AI生成图标
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>AI生成自定义图标</DialogTitle>
+                      <DialogDescription>
+                        描述你想要的工业图标，AI将为你生成
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="icon-prompt">图标描述</Label>
+                        <Textarea
+                          id="icon-prompt"
+                          placeholder="例如: 一个简约的工业阀门图标，线条风格，适合深色背景"
+                          value={iconPrompt}
+                          onChange={(e) => setIconPrompt(e.target.value)}
+                          rows={3}
+                        />
+                      </div>
+                      <Button
+                        onClick={handleGenerateIcon}
+                        disabled={isGeneratingIcon || !iconPrompt.trim()}
+                        className="w-full"
+                      >
+                        {isGeneratingIcon ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            生成中...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            生成图标
+                          </>
+                        )}
+                      </Button>
+                      {generatedIconUrl && (
+                        <div className="space-y-2">
+                          <Label>生成结果</Label>
+                          <div className="border rounded-lg p-4 bg-slate-800 flex items-center justify-center">
+                            <img
+                              src={generatedIconUrl}
+                              alt="Generated icon"
+                              className="max-w-[200px] max-h-[200px]"
+                            />
+                          </div>
+                          <Button onClick={handleApplyGeneratedIcon} className="w-full">
+                            应用此图标
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
               <div className="space-y-1 mb-3">
                 <Label htmlFor="iconSize" className="text-xs">
@@ -362,6 +478,21 @@ export default function ComponentPropertiesPanel({
                     placeholder="#00ff00"
                   />
                 </div>
+              </div>
+              <div className="space-y-1 mb-3">
+                <Label htmlFor="iconOpacity" className="text-xs">
+                  透明度: {((component.props.iconOpacity !== undefined ? component.props.iconOpacity : 1) * 100).toFixed(0)}%
+                </Label>
+                <Input
+                  id="iconOpacity"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={component.props.iconOpacity !== undefined ? component.props.iconOpacity : 1}
+                  onChange={(e) => handlePropChange('iconOpacity', parseFloat(e.target.value))}
+                  className="h-8"
+                />
               </div>
             </>
           )}
