@@ -90,6 +90,7 @@ model Requirement {
   tasks       Task[]
   comments    Comment[]
   attachments Attachment[]
+  prototypes  Prototype[]
 }
 
 model Task {
@@ -130,6 +131,7 @@ model Project {
   milestones   Milestone[]
   risks        Risk[]
   members      ProjectMember[]
+  prototypes   Prototype[]
 }
 
 model Milestone {
@@ -252,4 +254,79 @@ model AIPromptTemplate {
   updatedAt       DateTime @updatedAt
 
   @@index([analysisType])
+}
+
+// ============ 原型图功能相关表 ============
+
+model Prototype {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?
+
+  // 生成配置
+  generationType  String   // 'text_to_image', 'variation', 'upscale', 'vary_region', 'blend', 'describe', 'canvas_design'
+  platform        String   @default("web") // 'web', 'ios', 'android', 'industrial'
+  styleType       String   @default("wireframe") // 'wireframe', 'high_fidelity', 'sketch', 'industrial_hmi'
+
+  // 输入内容
+  promptText      String?  // 用户的文本描述
+  sourceImageUrl  String?  // 上传的原始图片URL（Supabase URL）
+
+  // Supabase Storage 信息
+  imageUrl        String?   // Supabase Storage 公开URL（canvas_design 类型可选）
+  imagePath       String?   // Storage 中的文件路径
+  imageSize       Int?     // 文件大小（字节）
+  imageMimeType   String   @default("image/png")
+
+  // Midjourney 特有字段
+  taskId          String?  // Midjourney 任务 ID（用于 Vary/Upscale 操作）
+  messageId       String?  // Discord 消息 ID
+  imageSeed       String?  // 图片种子值
+  imageIndex      Int?     // 如果是四宫格，记录是第几个 (1-4)
+
+  // Vary Region 专用字段
+  maskImageUrl    String?  // 遮罩图片 URL
+  maskImagePath   String?  // 遮罩图片存储路径
+  editRegionData  Json?    // 编辑区域的坐标数据 {x, y, width, height}
+
+  // Canvas 设计器专用字段（工业上位机原型）
+  canvasData      Json?    // 画布组件数据 {components: [], width, height, gridSize}
+  canvasSettings  Json?    // 画布设置 {showGrid, theme, backgroundColor}
+
+  // AI 分析结果
+  analysisResult  Json?    // JSON格式的分析结果
+  suggestions     String?  // 优化建议（Markdown格式）
+  identifiedComponents Json? // 识别的UI组件列表
+
+  // 关联
+  requirementId   String?
+  requirement     Requirement? @relation(fields: [requirementId], references: [id], onDelete: SetNull)
+  projectId       String?
+  project         Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  // 版本管理和迭代
+  parentId        String?  // 父原型图ID（用于迭代版本）
+  version         Int      @default(1)
+
+  // AI 元数据
+  modelUsed       String   @default("midjourney")
+  generationTime  Int?     // 生成耗时（毫秒）
+  promptTokens    Int?     // 使用的prompt tokens
+
+  // 状态
+  status          String   @default("draft") // 'draft', 'final', 'archived'
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // 关系
+  parent          Prototype?  @relation("PrototypeVersions", fields: [parentId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  children        Prototype[] @relation("PrototypeVersions")
+
+  @@index([requirementId])
+  @@index([projectId])
+  @@index([parentId])
+  @@index([taskId])
+  @@index([status])
+  @@index([createdAt])
 }
