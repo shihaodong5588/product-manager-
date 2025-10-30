@@ -32,6 +32,13 @@ export async function POST(
     console.log(`Describing prototype: ${prototype.id}`)
     console.log(`Image URL: ${prototype.imageUrl}`)
 
+    if (!prototype.imageUrl) {
+      return NextResponse.json(
+        { error: 'Prototype has no image URL' },
+        { status: 400 }
+      )
+    }
+
     const midjourneyService = createMidjourneyImageService()
 
     // 提取提示词
