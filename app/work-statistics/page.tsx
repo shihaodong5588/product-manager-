@@ -86,6 +86,7 @@ export default function WorkStatisticsPage() {
   const [filterCategory, setFilterCategory] = useState('')
   const [filterType, setFilterType] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [formData, setFormData] = useState({
@@ -147,16 +148,22 @@ export default function WorkStatisticsPage() {
 
   const fetchWorkItems = async () => {
     try {
+      setError(null)
       const params = new URLSearchParams()
       if (filterCategory) params.append('workCategory', filterCategory)
       if (filterType) params.append('workItemType', filterType)
       if (filterStatus) params.append('status', filterStatus)
 
       const response = await fetch(`/api/work-items?${params}`)
+      if (!response.ok) {
+        throw new Error('获取数据失败')
+      }
       const data = await response.json()
       setWorkItems(data.workItems || [])
     } catch (error) {
       console.error('获取工作项失败:', error)
+      setError('数据库连接失败，请检查数据库配置或运行 "npx prisma db push" 创建数据表')
+      setWorkItems([])
     } finally {
       setLoading(false)
     }
@@ -165,10 +172,19 @@ export default function WorkStatisticsPage() {
   const fetchStatistics = async () => {
     try {
       const response = await fetch('/api/work-items/statistics')
+      if (!response.ok) {
+        throw new Error('获取统计失败')
+      }
       const data = await response.json()
       setStatistics(data)
     } catch (error) {
       console.error('获取统计数据失败:', error)
+      setStatistics({
+        total: 0,
+        categoryStats: [],
+        typeStats: [],
+        statusStats: [],
+      })
     }
   }
 
@@ -342,6 +358,26 @@ export default function WorkStatisticsPage() {
         <h1 className="text-3xl font-bold text-slate-900">工作统计</h1>
         <p className="text-slate-600 mt-2">需求和缺陷管理系统</p>
       </div>
+
+      {/* 错误提示 */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 mt-0.5">
+              <svg className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-red-800">数据库错误</h3>
+              <p className="mt-1 text-sm text-red-700">{error}</p>
+              <p className="mt-2 text-sm text-red-600">
+                提示：请在终端运行 <code className="bg-red-100 px-2 py-1 rounded">npx prisma db push</code> 来创建数据表
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 操作栏 */}
       <div className="flex justify-between items-center mb-6 gap-4">
@@ -530,50 +566,62 @@ export default function WorkStatisticsPage() {
               <div>
                 <h4 className="text-md font-semibold mb-3">工作类别分布</h4>
                 <div className="space-y-2">
-                  {statistics.categoryStats.map((stat) => (
-                    <div key={stat.category} className="flex items-center gap-4">
-                      <div className="w-48 text-sm">{stat.label}</div>
-                      <div className="flex-1 bg-slate-200 rounded-full h-6">
-                        <div
-                          className="bg-blue-500 h-6 rounded-full flex items-center justify-end px-2 text-white text-xs font-medium"
-                          style={{ width: `${stat.percentage}%` }}
-                        >
-                          {stat.percentage}%
+                  {statistics.categoryStats && statistics.categoryStats.length > 0 ? (
+                    statistics.categoryStats.map((stat) => (
+                      <div key={stat.category} className="flex items-center gap-4">
+                        <div className="w-48 text-sm">{stat.label}</div>
+                        <div className="flex-1 bg-slate-200 rounded-full h-6">
+                          <div
+                            className="bg-blue-500 h-6 rounded-full flex items-center justify-end px-2 text-white text-xs font-medium"
+                            style={{ width: `${stat.percentage}%` }}
+                          >
+                            {stat.percentage}%
+                          </div>
                         </div>
+                        <div className="w-16 text-sm text-slate-600 text-right">{stat.count} 项</div>
                       </div>
-                      <div className="w-16 text-sm text-slate-600 text-right">{stat.count} 项</div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-500 text-center py-4">暂无数据</p>
+                  )}
                 </div>
               </div>
 
               <div>
                 <h4 className="text-md font-semibold mb-3">工作项类型分布</h4>
                 <div className="grid grid-cols-2 gap-4">
-                  {statistics.typeStats.map((stat) => (
-                    <Card key={stat.type}>
-                      <CardContent className="p-4">
-                        <div className="text-sm text-slate-600">{stat.label}</div>
-                        <div className="text-2xl font-bold mt-2">{stat.count}</div>
-                        <div className="text-xs text-slate-500 mt-1">{stat.percentage}%</div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {statistics.typeStats && statistics.typeStats.length > 0 ? (
+                    statistics.typeStats.map((stat) => (
+                      <Card key={stat.type}>
+                        <CardContent className="p-4">
+                          <div className="text-sm text-slate-600">{stat.label}</div>
+                          <div className="text-2xl font-bold mt-2">{stat.count}</div>
+                          <div className="text-xs text-slate-500 mt-1">{stat.percentage}%</div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <p className="col-span-2 text-sm text-slate-500 text-center py-4">暂无数据</p>
+                  )}
                 </div>
               </div>
 
               <div>
                 <h4 className="text-md font-semibold mb-3">状态分布</h4>
                 <div className="grid grid-cols-3 gap-4">
-                  {statistics.statusStats.map((stat) => (
-                    <Card key={stat.status}>
-                      <CardContent className="p-4">
-                        <div className="text-sm text-slate-600">{stat.label}</div>
-                        <div className="text-2xl font-bold mt-2">{stat.count}</div>
-                        <div className="text-xs text-slate-500 mt-1">{stat.percentage}%</div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                  {statistics.statusStats && statistics.statusStats.length > 0 ? (
+                    statistics.statusStats.map((stat) => (
+                      <Card key={stat.status}>
+                        <CardContent className="p-4">
+                          <div className="text-sm text-slate-600">{stat.label}</div>
+                          <div className="text-2xl font-bold mt-2">{stat.count}</div>
+                          <div className="text-xs text-slate-500 mt-1">{stat.percentage}%</div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <p className="col-span-3 text-sm text-slate-500 text-center py-4">暂无数据</p>
+                  )}
                 </div>
               </div>
             </div>
