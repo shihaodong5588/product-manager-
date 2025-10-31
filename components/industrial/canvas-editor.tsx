@@ -43,6 +43,8 @@ interface CanvasEditorProps {
   onComponentSelect?: (component: CanvasComponent | null) => void
 }
 
+type ResizeHandle = 'n' | 's' | 'e' | 'w' | 'nw' | 'ne' | 'sw' | 'se'
+
 export default function CanvasEditor({
   components,
   onComponentsChange,
@@ -55,8 +57,11 @@ export default function CanvasEditor({
 }: CanvasEditorProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [resizingId, setResizingId] = useState<string | null>(null)
+  const [resizeHandle, setResizeHandle] = useState<ResizeHandle | null>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const isDraggingRef = useRef(false)
+  const isResizingRef = useRef(false)
 
   // 键盘微调移动
   useEffect(() => {
@@ -108,6 +113,106 @@ export default function CanvasEditor({
     )
     onComponentsChange(updatedComponents)
   }
+
+  // 调整大小处理
+  const handleResizeStart = useCallback(
+    (componentId: string, handle: ResizeHandle, e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+
+      const component = components.find((c) => c.id === componentId)
+      if (!component) return
+
+      const canvasRect = canvasRef.current?.getBoundingClientRect()
+      if (!canvasRect) return
+
+      setResizingId(componentId)
+      setResizeHandle(handle)
+      isResizingRef.current = true
+
+      const startX = e.clientX
+      const startY = e.clientY
+      const startWidth = component.width
+      const startHeight = component.height
+      const startLeft = component.x
+      const startTop = component.y
+
+      const handleMouseMove = (e: MouseEvent) => {
+        if (!isResizingRef.current) return
+
+        const deltaX = e.clientX - startX
+        const deltaY = e.clientY - startY
+
+        let newWidth = startWidth
+        let newHeight = startHeight
+        let newX = startLeft
+        let newY = startTop
+
+        // 根据不同的handle调整尺寸和位置
+        switch (handle) {
+          case 'e': // 右侧
+            newWidth = Math.max(50, startWidth + deltaX)
+            break
+          case 'w': // 左侧
+            newWidth = Math.max(50, startWidth - deltaX)
+            newX = startLeft + (startWidth - newWidth)
+            break
+          case 's': // 下侧
+            newHeight = Math.max(30, startHeight + deltaY)
+            break
+          case 'n': // 上侧
+            newHeight = Math.max(30, startHeight - deltaY)
+            newY = startTop + (startHeight - newHeight)
+            break
+          case 'se': // 右下
+            newWidth = Math.max(50, startWidth + deltaX)
+            newHeight = Math.max(30, startHeight + deltaY)
+            break
+          case 'sw': // 左下
+            newWidth = Math.max(50, startWidth - deltaX)
+            newX = startLeft + (startWidth - newWidth)
+            newHeight = Math.max(30, startHeight + deltaY)
+            break
+          case 'ne': // 右上
+            newWidth = Math.max(50, startWidth + deltaX)
+            newHeight = Math.max(30, startHeight - deltaY)
+            newY = startTop + (startHeight - newHeight)
+            break
+          case 'nw': // 左上
+            newWidth = Math.max(50, startWidth - deltaX)
+            newHeight = Math.max(30, startHeight - deltaY)
+            newX = startLeft + (startWidth - newWidth)
+            newY = startTop + (startHeight - newHeight)
+            break
+        }
+
+        // 限制在画布内
+        newX = Math.max(0, newX)
+        newY = Math.max(0, newY)
+        newWidth = Math.min(newWidth, width - newX)
+        newHeight = Math.min(newHeight, height - newY)
+
+        const updatedComponents = components.map((comp) =>
+          comp.id === componentId
+            ? { ...comp, x: newX, y: newY, width: newWidth, height: newHeight }
+            : comp
+        )
+        onComponentsChange(updatedComponents)
+      }
+
+      const handleMouseUp = () => {
+        isResizingRef.current = false
+        setResizingId(null)
+        setResizeHandle(null)
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
+
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+    },
+    [components, onComponentsChange, width, height]
+  )
 
   const handleMouseDown = useCallback(
     (componentId: string, e: React.MouseEvent) => {
@@ -169,9 +274,35 @@ export default function CanvasEditor({
     [components, onComponentsChange, width, height, gridSize, showGrid]
   )
 
+  // 包装组件内容，添加统一的边框支持
+  const wrapWithBorder = (content: React.ReactNode, component: CanvasComponent) => {
+    const showBorder = component.props.showBorder !== false
+    const borderColor = component.props.borderColor || '#e2e8f0'
+    const borderWidth = component.props.borderWidth || 2
+
+    // text和arrow组件有自己的边框处理，不需要包装
+    if (component.type === 'text' || component.type === 'arrow') {
+      return content
+    }
+
+    return (
+      <div
+        className="w-full h-full"
+        style={{
+          border: showBorder ? `${borderWidth}px solid ${borderColor}` : 'none',
+          borderRadius: '4px',
+          overflow: 'hidden',
+        }}
+      >
+        {content}
+      </div>
+    )
+  }
+
   const renderComponent = (component: CanvasComponent) => {
     const isDragging = draggingId === component.id
     const isSelected = selectedId === component.id
+    const isResizing = resizingId === component.id
 
     const componentStyle = {
       position: 'absolute' as const,
@@ -179,26 +310,26 @@ export default function CanvasEditor({
       top: component.y,
       width: component.width,
       height: component.height,
-      cursor: isDragging ? 'grabbing' : 'grab',
+      cursor: isDragging ? 'grabbing' : isResizing ? 'default' : 'grab',
       opacity: isDragging ? 0.7 : 1,
-      transition: isDragging ? 'none' : 'all 0.15s ease',
+      transition: isDragging || isResizing ? 'none' : 'all 0.15s ease',
       userSelect: 'none' as const,
       pointerEvents: 'auto' as const,
-      zIndex: isDragging ? 1000 : isSelected ? 100 : 1,
+      zIndex: isDragging || isResizing ? 1000 : isSelected ? 100 : 1,
     }
 
     let content
     switch (component.type) {
       case 'force-displacement-chart':
         content = (
-          <div className="w-full h-full bg-white rounded-lg shadow-md border-2 border-slate-300 flex items-center justify-center hover:border-blue-400 transition-colors">
+          <div className="w-full h-full bg-white rounded-lg shadow-md flex items-center justify-center hover:border-blue-400 transition-colors">
             <span className="text-slate-600 font-sans text-sm pointer-events-none">📊 力-位移曲线</span>
           </div>
         )
         break
       case 'parameter-display':
         content = (
-          <div className="w-full h-full bg-gradient-to-br from-white to-slate-50 rounded-lg shadow-md border-2 border-slate-300 p-3 hover:border-blue-400 transition-colors">
+          <div className="w-full h-full bg-gradient-to-br from-white to-slate-50 rounded-lg shadow-md p-3 hover:border-blue-400 transition-colors">
             <div className="text-slate-500 font-sans text-xs mb-1 pointer-events-none">
               {component.props.label || '参数'}
             </div>
@@ -211,7 +342,7 @@ export default function CanvasEditor({
         break
       case 'status-indicator':
         content = (
-          <div className="w-full h-full flex items-center gap-2 px-3 bg-white rounded-lg shadow-sm border-2 border-slate-300 hover:border-blue-400 transition-colors">
+          <div className="w-full h-full flex items-center gap-2 px-3 bg-white rounded-lg shadow-sm hover:border-blue-400 transition-colors">
             <div className="w-3 h-3 rounded-full bg-green-500 pointer-events-none shadow-sm" />
             <span className="text-slate-700 font-sans text-sm pointer-events-none">
               {component.props.label || '状态'}
@@ -221,7 +352,7 @@ export default function CanvasEditor({
         break
       case 'button':
         content = (
-          <div className="w-full h-full bg-gradient-to-b from-blue-500 to-blue-600 rounded-lg shadow-md flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all border-2 border-blue-700">
+          <div className="w-full h-full bg-gradient-to-b from-blue-500 to-blue-600 rounded-lg shadow-md flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all">
             <span className="text-white font-sans text-sm font-medium pointer-events-none">
               {component.props.label || '按钮'}
             </span>
@@ -230,7 +361,7 @@ export default function CanvasEditor({
         break
       case 'panel':
         content = (
-          <div className="w-full h-full bg-white rounded-lg shadow-lg border-2 border-slate-300 hover:border-blue-400 transition-colors overflow-hidden">
+          <div className="w-full h-full bg-white rounded-lg shadow-lg hover:border-blue-400 transition-colors overflow-hidden">
             <div className="bg-gradient-to-r from-slate-100 to-slate-50 border-b-2 border-slate-200 px-3 py-2">
               <span className="text-slate-700 font-sans text-sm font-semibold pointer-events-none">
                 {component.props.title || '面板'}
@@ -242,7 +373,7 @@ export default function CanvasEditor({
         break
       case 'input':
         content = (
-          <div className="w-full h-full bg-white rounded-md shadow-sm border-2 border-slate-300 px-3 py-2 flex items-center hover:border-blue-400 transition-colors">
+          <div className="w-full h-full bg-white rounded-md shadow-sm px-3 py-2 flex items-center hover:border-blue-400 transition-colors">
             <span className="text-slate-400 font-sans text-sm pointer-events-none">
               {component.props.placeholder || '输入文本...'}
             </span>
@@ -251,7 +382,7 @@ export default function CanvasEditor({
         break
       case 'slider':
         content = (
-          <div className="w-full h-full bg-white rounded-lg shadow-sm border-2 border-slate-300 p-4 flex flex-col justify-center hover:border-blue-400 transition-colors">
+          <div className="w-full h-full bg-white rounded-lg shadow-sm p-4 flex flex-col justify-center hover:border-blue-400 transition-colors">
             <div className="text-slate-600 font-sans text-xs mb-2 pointer-events-none">
               {component.props.label || '滑块'}
             </div>
@@ -263,7 +394,7 @@ export default function CanvasEditor({
         break
       case 'gauge':
         content = (
-          <div className="w-full h-full bg-white rounded-lg shadow-md border-2 border-slate-300 flex items-center justify-center hover:border-blue-400 transition-colors">
+          <div className="w-full h-full bg-white rounded-lg shadow-md flex items-center justify-center hover:border-blue-400 transition-colors">
             <div className="text-center pointer-events-none">
               <div className="text-3xl mb-1">🎯</div>
               <div className="text-slate-600 font-sans text-xs">
@@ -275,7 +406,7 @@ export default function CanvasEditor({
         break
       case 'table':
         content = (
-          <div className="w-full h-full bg-white rounded-lg shadow-md border-2 border-slate-300 overflow-hidden hover:border-blue-400 transition-colors">
+          <div className="w-full h-full bg-white rounded-lg shadow-md overflow-hidden hover:border-blue-400 transition-colors">
             <div className="grid grid-cols-3 gap-px bg-slate-200 pointer-events-none">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className={cn("bg-white p-2", i < 3 && "bg-slate-50")}>
@@ -333,7 +464,7 @@ export default function CanvasEditor({
         if (component.props.iconType === 'custom' && component.props.customIconUrl) {
           content = (
             <div
-              className="w-full h-full flex items-center justify-center rounded-lg border-2 border-slate-600 hover:border-blue-400 transition-colors pointer-events-none"
+              className="w-full h-full flex items-center justify-center rounded-lg hover:border-blue-400 transition-colors pointer-events-none"
               style={{ backgroundColor: hexToRgba(bgColor, bgOpacity) }}
             >
               <img
@@ -368,7 +499,7 @@ export default function CanvasEditor({
 
           content = (
             <div
-              className="w-full h-full flex items-center justify-center rounded-lg border-2 border-slate-600 hover:border-blue-400 transition-colors pointer-events-none"
+              className="w-full h-full flex items-center justify-center rounded-lg hover:border-blue-400 transition-colors pointer-events-none"
               style={{ backgroundColor: hexToRgba(bgColor, bgOpacity) }}
             >
               <div style={{ opacity: iconOpacity }}>
@@ -428,11 +559,14 @@ export default function CanvasEditor({
         break
       default:
         content = (
-          <div className="w-full h-full bg-white rounded-lg shadow-sm border-2 border-slate-300 flex items-center justify-center">
+          <div className="w-full h-full bg-white rounded-lg shadow-sm flex items-center justify-center">
             <span className="text-slate-500 font-sans text-sm pointer-events-none">组件</span>
           </div>
         )
     }
+
+    // 为内容添加统一的边框支持
+    const wrappedContent = wrapWithBorder(content, component)
 
     return (
       <div key={component.id}>
@@ -449,11 +583,108 @@ export default function CanvasEditor({
             isDragging && 'shadow-2xl'
           )}
         >
-          {content}
+          {wrappedContent}
         </div>
 
-        {/* 微调控制按钮 */}
+        {/* 调整大小手柄 */}
         {isSelected && !isDragging && (
+          <>
+            {/* 上下左右四个手柄 */}
+            <div
+              className="absolute bg-white border-2 border-blue-500 rounded-full cursor-n-resize"
+              style={{
+                left: component.x + component.width / 2 - 4,
+                top: component.y - 4,
+                width: 8,
+                height: 8,
+                zIndex: 201,
+              }}
+              onMouseDown={(e) => handleResizeStart(component.id, 'n', e)}
+            />
+            <div
+              className="absolute bg-white border-2 border-blue-500 rounded-full cursor-s-resize"
+              style={{
+                left: component.x + component.width / 2 - 4,
+                top: component.y + component.height - 4,
+                width: 8,
+                height: 8,
+                zIndex: 201,
+              }}
+              onMouseDown={(e) => handleResizeStart(component.id, 's', e)}
+            />
+            <div
+              className="absolute bg-white border-2 border-blue-500 rounded-full cursor-w-resize"
+              style={{
+                left: component.x - 4,
+                top: component.y + component.height / 2 - 4,
+                width: 8,
+                height: 8,
+                zIndex: 201,
+              }}
+              onMouseDown={(e) => handleResizeStart(component.id, 'w', e)}
+            />
+            <div
+              className="absolute bg-white border-2 border-blue-500 rounded-full cursor-e-resize"
+              style={{
+                left: component.x + component.width - 4,
+                top: component.y + component.height / 2 - 4,
+                width: 8,
+                height: 8,
+                zIndex: 201,
+              }}
+              onMouseDown={(e) => handleResizeStart(component.id, 'e', e)}
+            />
+
+            {/* 四个角的手柄 */}
+            <div
+              className="absolute bg-white border-2 border-blue-500 rounded-full cursor-nw-resize"
+              style={{
+                left: component.x - 4,
+                top: component.y - 4,
+                width: 8,
+                height: 8,
+                zIndex: 201,
+              }}
+              onMouseDown={(e) => handleResizeStart(component.id, 'nw', e)}
+            />
+            <div
+              className="absolute bg-white border-2 border-blue-500 rounded-full cursor-ne-resize"
+              style={{
+                left: component.x + component.width - 4,
+                top: component.y - 4,
+                width: 8,
+                height: 8,
+                zIndex: 201,
+              }}
+              onMouseDown={(e) => handleResizeStart(component.id, 'ne', e)}
+            />
+            <div
+              className="absolute bg-white border-2 border-blue-500 rounded-full cursor-sw-resize"
+              style={{
+                left: component.x - 4,
+                top: component.y + component.height - 4,
+                width: 8,
+                height: 8,
+                zIndex: 201,
+              }}
+              onMouseDown={(e) => handleResizeStart(component.id, 'sw', e)}
+            />
+            <div
+              className="absolute bg-white border-2 border-blue-500 rounded-full cursor-se-resize"
+              style={{
+                left: component.x + component.width - 4,
+                top: component.y + component.height - 4,
+                width: 8,
+                height: 8,
+                zIndex: 201,
+              }}
+              onMouseDown={(e) => handleResizeStart(component.id, 'se', e)}
+            />
+          </>
+        )}
+
+        {/* 微调控制按钮 */}
+        {isSelected && !isDragging && !isResizing && (
           <div
             className="absolute bg-white rounded-lg shadow-lg border border-slate-300 p-1 flex gap-1"
             style={{
@@ -545,7 +776,7 @@ export default function CanvasEditor({
       {/* 提示信息 */}
       {selectedId && (
         <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-md border border-slate-200 text-xs text-slate-600 font-sans pointer-events-none">
-          💡 使用方向键微调位置 | Shift+方向键快速移动
+          💡 使用方向键微调位置 | Shift+方向键快速移动 | 拖动边框调整大小
         </div>
       )}
     </div>
