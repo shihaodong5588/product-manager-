@@ -179,6 +179,65 @@ export default function ComponentPropertiesPanel({
         <div className="pt-2 border-t">
           <Label className="text-xs font-semibold mb-3 block">组件属性</Label>
 
+          {/* 边框设置 (除了 text 和 arrow 组件) */}
+          {component.type !== 'text' && component.type !== 'arrow' && (
+            <>
+              <div className="space-y-1 mb-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="showBorder" className="text-xs">
+                    显示边框
+                  </Label>
+                  <input
+                    id="showBorder"
+                    type="checkbox"
+                    checked={component.props.showBorder !== false}
+                    onChange={(e) => handlePropChange('showBorder', e.target.checked)}
+                    className="h-4 w-4 cursor-pointer"
+                  />
+                </div>
+              </div>
+              {component.props.showBorder !== false && (
+                <>
+                  <div className="space-y-1 mb-3">
+                    <Label htmlFor="borderColor" className="text-xs">
+                      边框颜色
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="borderColor"
+                        type="color"
+                        value={component.props.borderColor || '#e2e8f0'}
+                        onChange={(e) => handlePropChange('borderColor', e.target.value)}
+                        className="h-8 w-16"
+                      />
+                      <Input
+                        type="text"
+                        value={component.props.borderColor || '#e2e8f0'}
+                        onChange={(e) => handlePropChange('borderColor', e.target.value)}
+                        className="h-8 text-sm flex-1"
+                        placeholder="#e2e8f0"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1 mb-3">
+                    <Label htmlFor="borderWidth" className="text-xs">
+                      边框宽度 (px)
+                    </Label>
+                    <Input
+                      id="borderWidth"
+                      type="number"
+                      value={component.props.borderWidth || 2}
+                      onChange={(e) => handlePropChange('borderWidth', parseInt(e.target.value) || 2)}
+                      className="h-8 text-sm"
+                      min={0}
+                      max={10}
+                    />
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
           {/* Label 属性 (大多数组件都有) */}
           {component.type !== 'text' && (
             <div className="space-y-1 mb-3">
