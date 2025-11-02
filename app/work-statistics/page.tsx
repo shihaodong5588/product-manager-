@@ -157,6 +157,8 @@ export default function WorkStatisticsPage() {
       if (filterCategory) params.append('workCategory', filterCategory)
       if (filterType) params.append('workItemType', filterType)
       if (filterStatus) params.append('status', filterStatus)
+      // 设置大分页以显示所有数据
+      params.append('pageSize', '10000')
 
       const response = await fetch(`/api/work-items?${params}`)
 
@@ -293,6 +295,27 @@ export default function WorkStatisticsPage() {
     } catch (error) {
       console.error('删除工作项失败:', error)
       alert('删除失败')
+    }
+  }
+
+  const handleDeleteAll = async () => {
+    const confirmMessage = `确定要删除所有 ${workItems.length} 个工作项吗？此操作不可撤销！`
+    if (!confirm(confirmMessage)) return
+
+    try {
+      const response = await fetch('/api/work-items/delete-all', { method: 'DELETE' })
+      const result = await response.json()
+
+      if (response.ok) {
+        alert(result.message || '删除成功')
+        fetchWorkItems()
+        fetchStatistics()
+      } else {
+        throw new Error(result.error || '删除失败')
+      }
+    } catch (error) {
+      console.error('删除全部工作项失败:', error)
+      alert(error instanceof Error ? error.message : '删除全部失败')
     }
   }
 
@@ -571,6 +594,16 @@ export default function WorkStatisticsPage() {
             <Download className="h-4 w-4 mr-2" />
             导出CSV
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDeleteAll}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            disabled={workItems.length === 0}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            删除全部
+          </Button>
           <Button size="sm" onClick={() => setShowAddDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             新建工作项
@@ -586,13 +619,13 @@ export default function WorkStatisticsPage() {
               <thead className="bg-slate-50 border-b">
                 <tr>
                   <th className="text-left p-4 text-sm font-medium text-slate-700">标题</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700">类型</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700">工作类别</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700">优先级</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700">状态</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700">负责人</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700">创建时间</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700">操作</th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700" style={{ minWidth: '120px' }}>类型</th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700" style={{ minWidth: '180px' }}>工作类别</th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700" style={{ minWidth: '100px' }}>优先级</th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700" style={{ minWidth: '100px' }}>状态</th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700" style={{ minWidth: '120px' }}>负责人</th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700" style={{ minWidth: '100px' }}>创建时间</th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700" style={{ minWidth: '100px' }}>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -613,7 +646,7 @@ export default function WorkStatisticsPage() {
                           </div>
                         )}
                       </td>
-                      <td className="p-4 text-sm">
+                      <td className="p-4 text-sm" style={{ minWidth: '120px' }}>
                         <select
                           value={item.workItemType}
                           onChange={(e) => handleQuickUpdate(item.id, 'workItemType', e.target.value)}
@@ -626,7 +659,7 @@ export default function WorkStatisticsPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="p-4 text-sm">
+                      <td className="p-4 text-sm" style={{ minWidth: '180px' }}>
                         <select
                           value={item.workCategory}
                           onChange={(e) => handleQuickUpdate(item.id, 'workCategory', e.target.value)}
@@ -639,7 +672,7 @@ export default function WorkStatisticsPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="p-4 text-sm">
+                      <td className="p-4 text-sm" style={{ minWidth: '100px' }}>
                         <select
                           value={item.priority}
                           onChange={(e) => handleQuickUpdate(item.id, 'priority', e.target.value)}
@@ -658,7 +691,7 @@ export default function WorkStatisticsPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="p-4 text-sm">
+                      <td className="p-4 text-sm" style={{ minWidth: '100px' }}>
                         <select
                           value={item.status}
                           onChange={(e) => handleQuickUpdate(item.id, 'status', e.target.value)}
@@ -671,7 +704,7 @@ export default function WorkStatisticsPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="p-4 text-sm">
+                      <td className="p-4 text-sm" style={{ minWidth: '120px' }}>
                         <input
                           type="text"
                           defaultValue={item.assigneeName || ''}
@@ -684,10 +717,10 @@ export default function WorkStatisticsPage() {
                           placeholder="-"
                         />
                       </td>
-                      <td className="p-4 text-sm text-slate-500">
+                      <td className="p-4 text-sm text-slate-500" style={{ minWidth: '100px' }}>
                         {new Date(item.createdAt).toLocaleDateString('zh-CN')}
                       </td>
-                      <td className="p-4">
+                      <td className="p-4" style={{ minWidth: '100px' }}>
                         <div className="flex gap-2">
                           <Button
                             variant="ghost"
