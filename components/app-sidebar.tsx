@@ -68,15 +68,15 @@ export function AppSidebar({ collapsed = false, onToggle }: AppSidebarProps) {
               key={item.name}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 isActive
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                collapsed && 'justify-center'
+                collapsed ? 'justify-center' : 'gap-3'
               )}
               title={collapsed ? item.name : undefined}
             >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
+              <item.icon className={cn("h-5 w-5 flex-shrink-0", collapsed && "mx-auto")} />
               <span className={cn(
                 "transition-opacity duration-300 whitespace-nowrap",
                 collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"

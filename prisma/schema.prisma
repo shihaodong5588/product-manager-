@@ -19,6 +19,12 @@ enum Priority {
   HIGH
 }
 
+enum Importance {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 enum TaskStatus {
   TODO
   IN_PROGRESS
@@ -366,6 +372,7 @@ model WorkItem {
   workItemType    WorkItemType     @default(REQUIREMENT)
   workCategory    WorkCategory     @default(PRODUCT_REQUIREMENT)
   priority        Priority         @default(MEDIUM)
+  importance      Importance       @default(MEDIUM)
   status          WorkItemStatus   @default(NEW)
 
   // 工作项详细信息

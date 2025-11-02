@@ -32,6 +32,7 @@ interface WorkItem {
   workItemType: string
   workCategory: string
   priority: string
+  importance: string
   status: string
   assigneeName?: string
   reporterName?: string
@@ -89,12 +90,29 @@ export default function WorkStatisticsPage() {
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // 列宽调整相关状态
+  const [columnWidths, setColumnWidths] = useState({
+    title: 200,
+    type: 120,
+    category: 180,
+    priority: 100,
+    importance: 100,
+    status: 100,
+    assignee: 120,
+    createdAt: 100,
+    actions: 100,
+  })
+  const [resizing, setResizing] = useState<string | null>(null)
+  const [startX, setStartX] = useState(0)
+  const [startWidth, setStartWidth] = useState(0)
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     workItemType: 'REQUIREMENT',
     workCategory: 'PRODUCT_REQUIREMENT',
     priority: 'MEDIUM',
+    importance: 'MEDIUM',
     status: 'NEW',
     assigneeName: '',
     reporterName: '',
@@ -126,6 +144,12 @@ export default function WorkStatisticsPage() {
   ]
 
   const priorityOptions = [
+    { value: 'LOW', label: '低' },
+    { value: 'MEDIUM', label: '中' },
+    { value: 'HIGH', label: '高' },
+  ]
+
+  const importanceOptions = [
     { value: 'LOW', label: '低' },
     { value: 'MEDIUM', label: '中' },
     { value: 'HIGH', label: '高' },
@@ -359,6 +383,7 @@ export default function WorkStatisticsPage() {
       workItemType: item.workItemType,
       workCategory: item.workCategory,
       priority: item.priority,
+      importance: item.importance || 'MEDIUM',
       status: item.status,
       assigneeName: item.assigneeName || '',
       reporterName: item.reporterName || '',
@@ -382,6 +407,7 @@ export default function WorkStatisticsPage() {
       workItemType: 'REQUIREMENT',
       workCategory: 'PRODUCT_REQUIREMENT',
       priority: 'MEDIUM',
+      importance: 'MEDIUM',
       status: 'NEW',
       assigneeName: '',
       reporterName: '',
@@ -469,6 +495,44 @@ export default function WorkStatisticsPage() {
   const getPriorityLabel = (priority: string) => {
     return priorityOptions.find((opt) => opt.value === priority)?.label || priority
   }
+
+  const getImportanceLabel = (importance: string) => {
+    return importanceOptions.find((opt) => opt.value === importance)?.label || importance
+  }
+
+  // 列宽调整处理函数
+  const handleMouseDown = (columnKey: string, e: React.MouseEvent) => {
+    e.preventDefault()
+    setResizing(columnKey)
+    setStartX(e.clientX)
+    setStartWidth(columnWidths[columnKey as keyof typeof columnWidths])
+  }
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!resizing) return
+    const diff = e.clientX - startX
+    const newWidth = Math.max(50, startWidth + diff) // 最小宽度 50px
+    setColumnWidths((prev) => ({
+      ...prev,
+      [resizing]: newWidth,
+    }))
+  }
+
+  const handleMouseUp = () => {
+    setResizing(null)
+  }
+
+  // 监听鼠标事件
+  useEffect(() => {
+    if (resizing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
+    }
+  }, [resizing, startX, startWidth])
 
   if (loading) {
     return (
@@ -618,27 +682,82 @@ export default function WorkStatisticsPage() {
             <table className="w-full">
               <thead className="bg-slate-50 border-b">
                 <tr>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700">标题</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700" style={{ minWidth: '120px' }}>类型</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700" style={{ minWidth: '180px' }}>工作类别</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700" style={{ minWidth: '100px' }}>优先级</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700" style={{ minWidth: '100px' }}>状态</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700" style={{ minWidth: '120px' }}>负责人</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700" style={{ minWidth: '100px' }}>创建时间</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700" style={{ minWidth: '100px' }}>操作</th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700 relative" style={{ width: `${columnWidths.title}px` }}>
+                    标题
+                    <div
+                      className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-500"
+                      onMouseDown={(e) => handleMouseDown('title', e)}
+                    />
+                  </th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700 relative" style={{ width: `${columnWidths.type}px` }}>
+                    类型
+                    <div
+                      className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-500"
+                      onMouseDown={(e) => handleMouseDown('type', e)}
+                    />
+                  </th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700 relative" style={{ width: `${columnWidths.category}px` }}>
+                    工作类别
+                    <div
+                      className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-500"
+                      onMouseDown={(e) => handleMouseDown('category', e)}
+                    />
+                  </th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700 relative" style={{ width: `${columnWidths.priority}px` }}>
+                    优先级
+                    <div
+                      className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-500"
+                      onMouseDown={(e) => handleMouseDown('priority', e)}
+                    />
+                  </th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700 relative" style={{ width: `${columnWidths.importance}px` }}>
+                    重要性
+                    <div
+                      className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-500"
+                      onMouseDown={(e) => handleMouseDown('importance', e)}
+                    />
+                  </th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700 relative" style={{ width: `${columnWidths.status}px` }}>
+                    状态
+                    <div
+                      className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-500"
+                      onMouseDown={(e) => handleMouseDown('status', e)}
+                    />
+                  </th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700 relative" style={{ width: `${columnWidths.assignee}px` }}>
+                    负责人
+                    <div
+                      className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-500"
+                      onMouseDown={(e) => handleMouseDown('assignee', e)}
+                    />
+                  </th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700 relative" style={{ width: `${columnWidths.createdAt}px` }}>
+                    创建时间
+                    <div
+                      className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-500"
+                      onMouseDown={(e) => handleMouseDown('createdAt', e)}
+                    />
+                  </th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700 relative" style={{ width: `${columnWidths.actions}px` }}>
+                    操作
+                    <div
+                      className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-500"
+                      onMouseDown={(e) => handleMouseDown('actions', e)}
+                    />
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-12 text-slate-500">
+                    <td colSpan={9} className="text-center py-12 text-slate-500">
                       暂无数据
                     </td>
                   </tr>
                 ) : (
                   filteredItems.map((item) => (
                     <tr key={item.id} className="border-b hover:bg-slate-50">
-                      <td className="p-4 text-sm">
+                      <td className="p-4 text-sm" style={{ width: `${columnWidths.title}px` }}>
                         <div className="font-medium text-slate-900">{item.title}</div>
                         {item.description && (
                           <div className="text-xs text-slate-500 mt-1 line-clamp-1">
@@ -646,7 +765,7 @@ export default function WorkStatisticsPage() {
                           </div>
                         )}
                       </td>
-                      <td className="p-4 text-sm" style={{ minWidth: '120px' }}>
+                      <td className="p-4 text-sm" style={{ width: `${columnWidths.type}px` }}>
                         <select
                           value={item.workItemType}
                           onChange={(e) => handleQuickUpdate(item.id, 'workItemType', e.target.value)}
@@ -659,7 +778,7 @@ export default function WorkStatisticsPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="p-4 text-sm" style={{ minWidth: '180px' }}>
+                      <td className="p-4 text-sm" style={{ width: `${columnWidths.category}px` }}>
                         <select
                           value={item.workCategory}
                           onChange={(e) => handleQuickUpdate(item.id, 'workCategory', e.target.value)}
@@ -672,7 +791,7 @@ export default function WorkStatisticsPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="p-4 text-sm" style={{ minWidth: '100px' }}>
+                      <td className="p-4 text-sm" style={{ width: `${columnWidths.priority}px` }}>
                         <select
                           value={item.priority}
                           onChange={(e) => handleQuickUpdate(item.id, 'priority', e.target.value)}
@@ -691,7 +810,26 @@ export default function WorkStatisticsPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="p-4 text-sm" style={{ minWidth: '100px' }}>
+                      <td className="p-4 text-sm" style={{ width: `${columnWidths.importance}px` }}>
+                        <select
+                          value={item.importance}
+                          onChange={(e) => handleQuickUpdate(item.id, 'importance', e.target.value)}
+                          className={`px-2 py-1 rounded-full text-xs border-0 cursor-pointer ${
+                            item.importance === 'HIGH'
+                              ? 'bg-orange-100 text-orange-700'
+                              : item.importance === 'MEDIUM'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          {importanceOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-4 text-sm" style={{ width: `${columnWidths.status}px` }}>
                         <select
                           value={item.status}
                           onChange={(e) => handleQuickUpdate(item.id, 'status', e.target.value)}
@@ -704,7 +842,7 @@ export default function WorkStatisticsPage() {
                           ))}
                         </select>
                       </td>
-                      <td className="p-4 text-sm" style={{ minWidth: '120px' }}>
+                      <td className="p-4 text-sm" style={{ width: `${columnWidths.assignee}px` }}>
                         <input
                           type="text"
                           defaultValue={item.assigneeName || ''}
@@ -717,10 +855,10 @@ export default function WorkStatisticsPage() {
                           placeholder="-"
                         />
                       </td>
-                      <td className="p-4 text-sm text-slate-500" style={{ minWidth: '100px' }}>
+                      <td className="p-4 text-sm text-slate-500" style={{ width: `${columnWidths.createdAt}px` }}>
                         {new Date(item.createdAt).toLocaleDateString('zh-CN')}
                       </td>
-                      <td className="p-4" style={{ minWidth: '100px' }}>
+                      <td className="p-4" style={{ width: `${columnWidths.actions}px` }}>
                         <div className="flex gap-2">
                           <Button
                             variant="ghost"
@@ -895,6 +1033,20 @@ export default function WorkStatisticsPage() {
                 className="w-full border rounded-md px-3 py-2"
               >
                 {priorityOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>重要性</Label>
+              <select
+                value={formData.importance}
+                onChange={(e) => setFormData({ ...formData, importance: e.target.value })}
+                className="w-full border rounded-md px-3 py-2"
+              >
+                {importanceOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
                   </option>
