@@ -866,8 +866,25 @@ export default function WorkStatisticsPage() {
                           placeholder="-"
                         />
                       </td>
-                      <td className="p-4 text-sm text-slate-500" style={{ width: `${columnWidths.createdAt}px` }}>
-                        {new Date(item.createdAt).toLocaleDateString('zh-CN')}
+                      <td className="p-4 text-sm" style={{ width: `${columnWidths.createdAt}px` }}>
+                        <input
+                          type="date"
+                          defaultValue={new Date(item.createdAt).toISOString().split('T')[0]}
+                          onBlur={(e) => {
+                            const newDate = e.target.value
+                            const oldDate = new Date(item.createdAt).toISOString().split('T')[0]
+                            if (newDate !== oldDate) {
+                              // 保持原有的时间部分，只更新日期
+                              const originalTime = new Date(item.createdAt)
+                              const newDateTime = new Date(newDate)
+                              newDateTime.setHours(originalTime.getHours())
+                              newDateTime.setMinutes(originalTime.getMinutes())
+                              newDateTime.setSeconds(originalTime.getSeconds())
+                              handleQuickUpdate(item.id, 'createdAt', newDateTime.toISOString())
+                            }
+                          }}
+                          className="border rounded px-2 py-1 text-sm w-full bg-white hover:bg-slate-50"
+                        />
                       </td>
                       <td className="p-4" style={{ width: `${columnWidths.actions}px` }}>
                         <div className="flex gap-2">
