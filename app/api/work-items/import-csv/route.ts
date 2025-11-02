@@ -51,6 +51,12 @@ export async function POST(request: NextRequest) {
       '待评审': 'MEDIUM',
     }
 
+    const importanceMap: Record<string, string> = {
+      '低': 'LOW',
+      '中': 'MEDIUM',
+      '高': 'HIGH',
+    }
+
     const statusMap: Record<string, string> = {
       '新建': 'NEW',
       '已分配': 'ASSIGNED',
@@ -76,6 +82,7 @@ export async function POST(request: NextRequest) {
       workItemType: ['工作项类型', '类型'],
       workCategory: ['工作类别', '类别', '分类'],
       priority: ['优先级'],
+      importance: ['重要性'],
       status: ['状态'],
       assigneeName: ['负责人', '指派给'],
       reporterName: ['报告人', '创建人'],
@@ -146,6 +153,13 @@ export async function POST(request: NextRequest) {
         unmappedValues.push({ row: i + 1, field: '优先级', value: priorityValue, usedDefault: 'MEDIUM (中)' })
       }
       item.priority = (priorityValue && priorityMap[priorityValue]) || 'MEDIUM'
+
+      // 重要性 - 只使用映射值或默认值，不使用原值
+      const importanceValue = getValue('importance')
+      if (importanceValue && !importanceMap[importanceValue]) {
+        unmappedValues.push({ row: i + 1, field: '重要性', value: importanceValue, usedDefault: 'MEDIUM (中)' })
+      }
+      item.importance = (importanceValue && importanceMap[importanceValue]) || 'MEDIUM'
 
       // 状态 - 只使用映射值或默认值，不使用原值
       const statusValue = getValue('status')

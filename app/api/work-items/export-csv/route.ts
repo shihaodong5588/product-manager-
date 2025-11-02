@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
       '工作项类型',
       '工作类别',
       '优先级',
+      '重要性',
       '状态',
       '负责人',
       '报告人',
@@ -56,6 +57,12 @@ export async function GET(request: NextRequest) {
       HIGH: '高',
     }
 
+    const importanceLabels: Record<string, string> = {
+      LOW: '低',
+      MEDIUM: '中',
+      HIGH: '高',
+    }
+
     const statusLabels: Record<string, string> = {
       NEW: '新建',
       ASSIGNED: '已分配',
@@ -73,6 +80,7 @@ export async function GET(request: NextRequest) {
       workItemTypeLabels[item.workItemType] || item.workItemType,
       workCategoryLabels[item.workCategory] || item.workCategory,
       priorityLabels[item.priority] || item.priority,
+      importanceLabels[item.importance] || item.importance,
       statusLabels[item.status] || item.status,
       item.assigneeName || '',
       item.reporterName || '',
