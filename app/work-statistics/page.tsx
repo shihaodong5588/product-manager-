@@ -72,6 +72,17 @@ interface Statistics {
     count: number
     percentage: string
   }>
+  weeklyTrends: Array<{
+    week: string
+    total: number
+    categories: Array<{
+      category: string
+      label: string
+      count: number
+      percentage: string
+      change: string | null
+    }>
+  }>
 }
 
 export default function WorkStatisticsPage() {
@@ -959,6 +970,69 @@ export default function WorkStatisticsPage() {
                   )}
                 </div>
               </div>
+
+              {/* 周趋势分析 */}
+              {statistics.weeklyTrends && statistics.weeklyTrends.length > 0 && (
+                <div>
+                  <h4 className="text-md font-semibold mb-3">工作类别周环比趋势</h4>
+                  <p className="text-sm text-slate-500 mb-4">
+                    观察各工作类别占比的周变化，帮助识别工作重心的转移
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm border-collapse">
+                      <thead className="bg-slate-100">
+                        <tr>
+                          <th className="border px-3 py-2 text-left font-medium">周次</th>
+                          <th className="border px-3 py-2 text-center font-medium">总数</th>
+                          {statistics.weeklyTrends[0]?.categories.map((cat) => (
+                            <th key={cat.category} className="border px-3 py-2 text-center font-medium">
+                              {cat.label.replace(/^\d+\.\s*/, '')}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {statistics.weeklyTrends.map((week) => (
+                          <tr key={week.week} className="hover:bg-slate-50">
+                            <td className="border px-3 py-2 font-medium">{week.week}</td>
+                            <td className="border px-3 py-2 text-center">{week.total}</td>
+                            {week.categories.map((cat) => (
+                              <td key={cat.category} className="border px-3 py-2 text-center">
+                                <div className="space-y-1">
+                                  <div className="font-medium">{cat.percentage}%</div>
+                                  {cat.change !== null && (
+                                    <div
+                                      className={`text-xs ${
+                                        parseFloat(cat.change) > 0
+                                          ? 'text-green-600'
+                                          : parseFloat(cat.change) < 0
+                                          ? 'text-red-600'
+                                          : 'text-slate-500'
+                                      }`}
+                                    >
+                                      {parseFloat(cat.change) > 0 ? '↑' : parseFloat(cat.change) < 0 ? '↓' : ''}
+                                      {cat.change}%
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-3 text-xs text-slate-500">
+                    <p>说明：</p>
+                    <ul className="list-disc list-inside space-y-1 mt-1">
+                      <li>百分比表示该类别占当周工作总数的比例</li>
+                      <li>环比变化 = 本周占比 - 上周占比</li>
+                      <li><span className="text-green-600">↑ 正数</span> 表示该类别占比上升，工作重要性增加</li>
+                      <li><span className="text-red-600">↓ 负数</span> 表示该类别占比下降，工作重要性减少</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

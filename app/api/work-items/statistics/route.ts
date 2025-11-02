@@ -5,7 +5,9 @@ import { apiHandler } from '@/lib/api-middleware'
 export async function GET(request: NextRequest) {
   return apiHandler(async () => {
     // 获取所有工作项
-    const workItems = await prisma.workItem.findMany()
+    const workItems = await prisma.workItem.findMany({
+      orderBy: { createdAt: 'desc' }
+    })
     const total = workItems.length
 
     if (total === 0) {
@@ -14,6 +16,7 @@ export async function GET(request: NextRequest) {
         categoryStats: [],
         typeStats: [],
         statusStats: [],
+        weeklyTrends: [],
       })
     }
 
@@ -82,11 +85,85 @@ export async function GET(request: NextRequest) {
       percentage: ((count / total) * 100).toFixed(2),
     }))
 
+    // 计算周趋势数据
+    const getWeekKey = (date: Date) => {
+      const year = date.getFullYear()
+      const weekNumber = getWeekNumber(date)
+      return `${year}-W${weekNumber.toString().padStart(2, '0')}`
+    }
+
+    const getWeekNumber = (date: Date) => {
+      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+      const dayNum = d.getUTCDay() || 7
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+      return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7)
+    }
+
+    // 按周分组统计
+    const weeklyData: Record<string, Record<string, number>> = {}
+    const weeklyTotals: Record<string, number> = {}
+
+    workItems.forEach((item) => {
+      const weekKey = getWeekKey(new Date(item.createdAt))
+
+      if (!weeklyData[weekKey]) {
+        weeklyData[weekKey] = {}
+        weeklyTotals[weekKey] = 0
+      }
+
+      weeklyData[weekKey][item.workCategory] = (weeklyData[weekKey][item.workCategory] || 0) + 1
+      weeklyTotals[weekKey]++
+    })
+
+    // 获取最近8周的数据（包括当前周）
+    const weeks = Object.keys(weeklyData).sort().reverse().slice(0, 8).reverse()
+
+    // 计算每周的类别占比和环比变化
+    const weeklyTrends = weeks.map((weekKey, index) => {
+      const weekData = weeklyData[weekKey]
+      const weekTotal = weeklyTotals[weekKey]
+
+      const categoryPercentages: Record<string, number> = {}
+      const categoryChanges: Record<string, number | null> = {}
+
+      Object.keys(categoryLabels).forEach((category) => {
+        const count = weekData[category] || 0
+        const percentage = weekTotal > 0 ? (count / weekTotal) * 100 : 0
+        categoryPercentages[category] = percentage
+
+        // 计算环比变化（与上周对比）
+        if (index > 0) {
+          const prevWeek = weeks[index - 1]
+          const prevWeekData = weeklyData[prevWeek]
+          const prevWeekTotal = weeklyTotals[prevWeek]
+          const prevCount = prevWeekData[category] || 0
+          const prevPercentage = prevWeekTotal > 0 ? (prevCount / prevWeekTotal) * 100 : 0
+          categoryChanges[category] = percentage - prevPercentage
+        } else {
+          categoryChanges[category] = null
+        }
+      })
+
+      return {
+        week: weekKey,
+        total: weekTotal,
+        categories: Object.keys(categoryLabels).map((category) => ({
+          category,
+          label: categoryLabels[category],
+          count: weekData[category] || 0,
+          percentage: categoryPercentages[category].toFixed(2),
+          change: categoryChanges[category] !== null ? categoryChanges[category].toFixed(2) : null,
+        })),
+      }
+    })
+
     return NextResponse.json({
       total,
       categoryStats,
       typeStats,
       statusStats,
+      weeklyTrends,
     })
   }, { operationName: '获取工作项统计' })
 }
