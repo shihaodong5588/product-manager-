@@ -154,12 +154,18 @@ export async function POST(request: NextRequest) {
       }
       item.priority = (priorityValue && priorityMap[priorityValue]) || 'MEDIUM'
 
-      // 重要性 - 只使用映射值或默认值，不使用原值
+      // 重要性 - 可选字段，如果CSV中没有此列或值为空，默认为MEDIUM
       const importanceValue = getValue('importance')
-      if (importanceValue && !importanceMap[importanceValue]) {
-        unmappedValues.push({ row: i + 1, field: '重要性', value: importanceValue, usedDefault: 'MEDIUM (中)' })
+      if (importanceValue) {
+        // 只有当CSV中有重要性值时才进行映射检查
+        if (!importanceMap[importanceValue]) {
+          unmappedValues.push({ row: i + 1, field: '重要性', value: importanceValue, usedDefault: 'MEDIUM (中)' })
+        }
+        item.importance = importanceMap[importanceValue] || 'MEDIUM'
+      } else {
+        // CSV中没有重要性列或值为空，使用默认值
+        item.importance = 'MEDIUM'
       }
-      item.importance = (importanceValue && importanceMap[importanceValue]) || 'MEDIUM'
 
       // 状态 - 只使用映射值或默认值，不使用原值
       const statusValue = getValue('status')
