@@ -296,6 +296,38 @@ export default function WorkStatisticsPage() {
     }
   }
 
+  // 快速更新单个字段
+  const handleQuickUpdate = async (id: string, field: string, value: any) => {
+    try {
+      const item = workItems.find((i) => i.id === id)
+      if (!item) return
+
+      const response = await fetch(`/api/work-items/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...item,
+          [field]: value,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('更新失败')
+      }
+
+      // 更新本地状态
+      setWorkItems(workItems.map((i) =>
+        i.id === id ? { ...i, [field]: value } : i
+      ))
+      fetchStatistics()
+    } catch (error) {
+      console.error('快速更新失败:', error)
+      alert('更新失败，请重试')
+      // 重新获取数据以恢复原状
+      fetchWorkItems()
+    }
+  }
+
   const handleEdit = (item: WorkItem) => {
     setSelectedItem(item)
     setFormData({
@@ -376,11 +408,22 @@ export default function WorkStatisticsPage() {
       const result = await response.json()
       alert(result.message || '导入成功')
       setShowImportDialog(false)
-      fetchWorkItems()
-      fetchStatistics()
+
+      // 等待数据刷新完成
+      await fetchWorkItems()
+      await fetchStatistics()
+
+      // 重置文件输入以允许重新导入同一文件
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     } catch (error) {
       console.error('导入失败:', error)
       alert('导入失败')
+      // 重置文件输入
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
@@ -570,11 +613,37 @@ export default function WorkStatisticsPage() {
                           </div>
                         )}
                       </td>
-                      <td className="p-4 text-sm">{getTypeLabel(item.workItemType)}</td>
-                      <td className="p-4 text-sm text-xs">{getCategoryLabel(item.workCategory)}</td>
                       <td className="p-4 text-sm">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
+                        <select
+                          value={item.workItemType}
+                          onChange={(e) => handleQuickUpdate(item.id, 'workItemType', e.target.value)}
+                          className="border rounded px-2 py-1 text-sm w-full bg-white hover:bg-slate-50 cursor-pointer"
+                        >
+                          {workItemTypeOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-4 text-sm">
+                        <select
+                          value={item.workCategory}
+                          onChange={(e) => handleQuickUpdate(item.id, 'workCategory', e.target.value)}
+                          className="border rounded px-2 py-1 text-xs w-full bg-white hover:bg-slate-50 cursor-pointer"
+                        >
+                          {workCategoryOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-4 text-sm">
+                        <select
+                          value={item.priority}
+                          onChange={(e) => handleQuickUpdate(item.id, 'priority', e.target.value)}
+                          className={`px-2 py-1 rounded-full text-xs border-0 cursor-pointer ${
                             item.priority === 'HIGH'
                               ? 'bg-red-100 text-red-700'
                               : item.priority === 'MEDIUM'
@@ -582,15 +651,39 @@ export default function WorkStatisticsPage() {
                               : 'bg-green-100 text-green-700'
                           }`}
                         >
-                          {getPriorityLabel(item.priority)}
-                        </span>
+                          {priorityOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="p-4 text-sm">
-                        <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
-                          {getStatusLabel(item.status)}
-                        </span>
+                        <select
+                          value={item.status}
+                          onChange={(e) => handleQuickUpdate(item.id, 'status', e.target.value)}
+                          className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700 border-0 cursor-pointer"
+                        >
+                          {statusOptions.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
                       </td>
-                      <td className="p-4 text-sm">{item.assigneeName || '-'}</td>
+                      <td className="p-4 text-sm">
+                        <input
+                          type="text"
+                          defaultValue={item.assigneeName || ''}
+                          onBlur={(e) => {
+                            if (e.target.value !== (item.assigneeName || '')) {
+                              handleQuickUpdate(item.id, 'assigneeName', e.target.value || null)
+                            }
+                          }}
+                          className="border rounded px-2 py-1 text-sm w-full bg-white hover:bg-slate-50"
+                          placeholder="-"
+                        />
+                      </td>
                       <td className="p-4 text-sm text-slate-500">
                         {new Date(item.createdAt).toLocaleDateString('zh-CN')}
                       </td>
